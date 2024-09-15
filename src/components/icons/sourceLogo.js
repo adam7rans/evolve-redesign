@@ -1,7 +1,8 @@
-import FullLogoComponent from '/public/icons/SOURCEFullLogo.svg';
+import React from 'react';
+import FullLogoSVG from '/public/icons/SOURCEFullLogo.svg';
 
-const FullLogo = () => {
-  return <FullLogoComponent />;
+const FullLogo = ({ className }) => {
+  return <FullLogoSVG className={className} />;
 };
 
 export default FullLogo;

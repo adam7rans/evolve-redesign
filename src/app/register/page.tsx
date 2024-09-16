@@ -23,22 +23,29 @@ export default function RegisterPage() {
       return;
     }
 
+    console.log('Attempting to sign up with email:', email);
     const { data, error: signUpError } = await signUp(email, password);
 
     if (signUpError) {
       console.error('Signup error:', signUpError);
-      if (signUpError.message.includes('User already registered')) {
+      if (signUpError.message === 'User already exists') {
         setError('This email is already registered. Please try logging in.');
-      } else if (signUpError.message.includes('Too many signup attempts')) {
-        setError('Too many signup attempts. Please try again later.');
       } else {
-        setError(signUpError.message);
+        setError(`An error occurred during signup: ${signUpError.message}. Please try again or contact support.`);
       }
-    } else {
-      setSuccessMessage('Registration successful! Please check your email to confirm your account.');
+    } else if (data && data.user) {
+      console.log('Signup initiated:', data.user);
+      if (data.user.confirmation_sent_at) {
+        setSuccessMessage('Registration successful! Please check your email to confirm your account.');
+      } else {
+        setSuccessMessage('Registration successful! You can now log in.');
+      }
       setEmail('');
       setPassword('');
       setConfirmPassword('');
+    } else {
+      console.error('No user data returned from signUp');
+      setError('An unexpected error occurred during signup. Please try again.');
     }
   };
 

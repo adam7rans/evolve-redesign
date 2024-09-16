@@ -1,65 +1,44 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function ConfirmPage() {
+  const [message, setMessage] = useState('Confirming your email...');
   const router = useRouter();
-  const [status, setStatus] = useState('Initializing...');
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const confirmEmail = async () => {
-      const log = (message: string) => {
-        console.log(message);
-        setStatus(message);
-      };
+      const access_token = searchParams.get('access_token');
+      const refresh_token = searchParams.get('refresh_token');
+      const type = searchParams.get('type');
 
-      log('Confirm page loaded');
-      
-      const hash = window.location.hash.substring(1);
-      log('Full hash: ' + hash);
+      if (access_token && type === 'signup') {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: access_token,
+          type: 'signup',
+        });
 
-      const params = new URLSearchParams(hash);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-
-      log(`Access Token: ${accessToken ? 'Present' : 'Missing'}, Refresh Token: ${refreshToken ? 'Present' : 'Missing'}`);
-
-      if (accessToken && refreshToken) {
-        log('Setting session...');
-        try {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (error) {
-            console.error('Error setting session:', error);
-            log(`Error: ${error.message}`);
-            setTimeout(() => router.push('/login'), 2000);
-          } else {
-            log('Session set successfully. Redirecting to dashboard...');
-            setTimeout(() => router.push('/dashboard?welcome=true'), 2000);
-          }
-        } catch (error) {
-          console.error('Unexpected error:', error);
-          log('Unexpected error occurred');
+        if (error) {
+          setMessage(`Error confirming email: ${error.message}`);
+        } else {
+          setMessage('Email confirmed successfully! Redirecting to login...');
           setTimeout(() => router.push('/login'), 2000);
         }
       } else {
-        log('No access token or refresh token found. Redirecting to login...');
-        setTimeout(() => router.push('/login'), 2000);
+        setMessage('Invalid confirmation link. Please try signing up again.');
       }
     };
 
     confirmEmail();
-  }, [router]);
+  }, [router, searchParams]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900">
-      <p className="text-black dark:text-white mb-4">Confirming your email...</p>
-      <p className="text-black dark:text-white">{status}</p>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-white dark:bg-gray-900">
+      <h1 className="text-2xl font-bold mb-6 text-black dark:text-white">Email Confirmation</h1>
+      <p className="text-center text-black dark:text-white">{message}</p>
     </div>
   );
 }

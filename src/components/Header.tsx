@@ -14,6 +14,10 @@ export function Header() {
     router.push('/login');
   };
 
+  const handleSignUp = () => {
+    router.push('/register');
+  };
+
   return (
     <header className="flex h-24 w-full shrink-0 items-center px-4 md:px-6 bg-white dark:bg-gray-900 text-black dark:text-white">
       <Link href="/" className="mr-6 flex items-center space-x-2">
@@ -39,7 +43,10 @@ export function Header() {
           >
             Log In
           </button>
-          <button className="px-4 py-2 rounded bg-black text-white dark:bg-white dark:text-black">
+          <button 
+            onClick={handleSignUp}
+            className="px-4 py-2 rounded bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+          >
             Sign Up
           </button>
         </div>

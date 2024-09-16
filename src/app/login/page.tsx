@@ -2,16 +2,26 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
 
-  const handleEmailLogin = (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement email/password login logic here
-    console.log('Email login:', email, password);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      console.error('Login error:', error.message);
+    } else {
+      console.log('Logged in:', data);
+      router.push('/dashboard'); // Redirect to dashboard or home page
+    }
   };
 
   const handleGoogleLogin = () => {
@@ -55,6 +65,9 @@ export default function LoginPage() {
         <button onClick={handleFacebookLogin} className="w-full p-2 mb-4 bg-white text-black border border-black rounded hover:bg-gray-100 dark:bg-gray-800 dark:text-white dark:border-white dark:hover:bg-gray-700">
           Login with Facebook
         </button>
+        <p className="text-center mt-4 text-black dark:text-white">
+          Don't have an account? <Link href="/register" className="text-blue-500 hover:underline">Register here</Link>
+        </p>
       </div>
     </div>
   );

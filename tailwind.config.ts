@@ -7,6 +7,7 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: 'class', // Added from .js version
   theme: {
     container: {
       center: true,
@@ -27,7 +28,7 @@ const config: Config = {
         },
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" }, // Changed 0 to "0"
+          to: { height: "0" },
         },
       },
       animation: {

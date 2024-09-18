@@ -66,7 +66,7 @@ export default function LoginPage() {
           Login with Facebook
         </button>
         <p className="text-center mt-4 text-black dark:text-white">
-          Don't have an account? <Link href="/register" className="text-blue-500 hover:underline">Register here</Link>
+          Don&apos;t have an account? <Link href="/register" className="text-blue-500 hover:underline">Register here</Link>
         </p>
       </div>
     </div>

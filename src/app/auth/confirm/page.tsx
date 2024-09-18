@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function ConfirmPage() {
+function ConfirmPageContent() {
   const [message, setMessage] = useState('Confirming your email...');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -12,7 +12,7 @@ export default function ConfirmPage() {
   useEffect(() => {
     const confirmEmail = async () => {
       const access_token = searchParams.get('access_token');
-      const refresh_token = searchParams.get('refresh_token');
+      const _refresh_token = searchParams.get('refresh_token');
       const type = searchParams.get('type');
 
       if (access_token && type === 'signup') {
@@ -40,5 +40,13 @@ export default function ConfirmPage() {
       <h1 className="text-2xl font-bold mb-6 text-black dark:text-white">Email Confirmation</h1>
       <p className="text-center text-black dark:text-white">{message}</p>
     </div>
+  );
+}
+
+export default function ConfirmPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ConfirmPageContent />
+    </Suspense>
   );
 }

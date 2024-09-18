@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const [showWelcome, setShowWelcome] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,5 +38,13 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-bold mb-4 text-black dark:text-white">Dashboard</h1>
       {/* Add your dashboard content here */}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardPageContent />
+    </Suspense>
   );
 }

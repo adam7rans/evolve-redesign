@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Link from 'next/link';
 import Spinner from '@/components/Spinner';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -15,41 +16,21 @@ export default function RegisterPage() {
   const [message, setMessage] = useState({ type: '', content: '' });
 
   const supabase = createClientComponentClient();
+  const router = useRouter();
 
   const handleEmailRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setMessage({ type: '', content: '' });
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      if (error) throw error;
-      setMessage({ type: 'success', content: 'Registration successful! Please check your email to verify your account. You will be redirected to the dashboard after confirmation.' });
-    } catch (error: any) {
-      console.error('Error during registration:', error);
-      setMessage({ type: 'error', content: error.message || 'Registration failed. Please try again.' });
-    } finally {
-      setIsLoading(false);
-    }
+    // Redirect to checkout with registration method
+    router.push(`/checkout?method=email&email=${email}`);
   };
 
   const handleGoogleRegister = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
-    });
-    if (error) {
-      console.error('Error during Google sign-in:', error);
-      setMessage({ type: 'error', content: 'Google sign-in failed. Please try again.' });
-    }
+    // Redirect to checkout with Google OAuth
+    router.push('/checkout?method=google');
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-white dark:bg-gray-900">
+    <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900">
       <h1 className="text-2xl font-bold mb-6 text-black dark:text-white">Register</h1>
       
       {message.content && (

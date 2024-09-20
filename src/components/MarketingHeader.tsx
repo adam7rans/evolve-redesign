@@ -30,7 +30,7 @@ export function MarketingHeader() {
           <Link href="/login" className="px-4 py-2 rounded bg-transparent text-black border border-black hover:bg-black hover:text-white dark:text-white dark:border-white dark:hover:bg-white dark:hover:text-black transition-colors">
             Log In
           </Link>
-          <Link href="/register" className="px-4 py-2 rounded bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors">
+          <Link href="/checkout" className="px-4 py-2 rounded bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors">
             Sign Up
           </Link>
         </div>

@@ -10,6 +10,7 @@ import "./globals.css";
 const ThemeProvider = dynamic(() => import('@/contexts/ThemeContext').then(mod => mod.ThemeProvider), { ssr: false });
 const AuthProvider = dynamic(() => import('@/contexts/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
 const AppHeader = dynamic(() => import('@/components/AppHeader').then(mod => mod.AppHeader), { ssr: false });
+const MarketingHeader = dynamic(() => import('@/components/MarketingHeader').then(mod => mod.MarketingHeader), { ssr: false });
 const Sidebar = dynamic(() => import('@/app/dashboard/Sidebar').then(mod => mod.Sidebar), { ssr: false });
 const SessionProvider = dynamic(() => import('next-auth/react').then(mod => mod.SessionProvider), { ssr: false });
 
@@ -29,6 +30,7 @@ const geistMono = localFont({
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthenticatedRoute = pathname?.startsWith('/dashboard') || pathname?.startsWith('/profile');
+  const isRootRoute = pathname === '/';
 
   return (
     <html lang="en">
@@ -36,10 +38,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SessionProvider>
           <ThemeProvider>
             <AuthProvider>
-              {isAuthenticatedRoute && <AppHeader />}
+              {!isRootRoute && (isAuthenticatedRoute ? <AppHeader /> : <MarketingHeader />)}
               <div className="flex">
                 {isAuthenticatedRoute && <Sidebar />}
-                <main className={`flex-1 ${isAuthenticatedRoute ? 'ml-[70px]' : ''}`}>{children}</main>
+                <main className={`flex-1 ${isAuthenticatedRoute ? 'ml-[70px]' : ''}`}>
+                  {children}
+                </main>
               </div>
             </AuthProvider>
           </ThemeProvider>

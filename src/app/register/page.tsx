@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createClient } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Link from 'next/link';
 import Spinner from '@/components/Spinner';
 
@@ -14,10 +14,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', content: '' });
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createClientComponentClient();
 
   const handleEmailRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +26,7 @@ export default function RegisterPage() {
         password,
       });
       if (error) throw error;
-      setMessage({ type: 'success', content: 'Registration successful! Please check your email to verify your account.' });
+      setMessage({ type: 'success', content: 'Registration successful! Please check your email to verify your account. You will be redirected to the dashboard after confirmation.' });
     } catch (error: any) {
       console.error('Error during registration:', error);
       setMessage({ type: 'error', content: error.message || 'Registration failed. Please try again.' });
@@ -38,8 +35,17 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogleRegister = () => {
-    signIn('google', { callbackUrl: '/dashboard' });
+  const handleGoogleRegister = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+    if (error) {
+      console.error('Error during Google sign-in:', error);
+      setMessage({ type: 'error', content: 'Google sign-in failed. Please try again.' });
+    }
   };
 
   return (

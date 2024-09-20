@@ -13,7 +13,6 @@ function DashboardPageContent() {
     const welcome = searchParams.get('welcome');
     if (welcome === 'true') {
       setShowWelcome(true);
-      // Remove the welcome parameter from the URL
       router.replace('/dashboard');
     }
 
@@ -25,6 +24,11 @@ function DashboardPageContent() {
     };
 
     checkUser();
+
+    // Remove hash from URL without reloading
+    if (window.location.hash) {
+      router.replace('/dashboard');
+    }
   }, [router, searchParams]);
 
   return (

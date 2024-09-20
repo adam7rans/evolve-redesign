@@ -2,23 +2,30 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { MarketingHeader } from '@/components/MarketingHeader';
 
-export default function Home() {
+export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log('Home page loaded');
-    const hash = window.location.hash;
-    console.log('Current hash:', hash);
-    if (hash && hash.includes('access_token')) {
-      console.log('Access token found, redirecting to /auth/confirm');
-      router.push(`/auth/confirm${hash}`);
-    }
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        router.push('/dashboard');
+      }
+    };
+
+    checkUser();
   }, [router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
-      <p className="text-black dark:text-white">Welcome to our application!</p>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
+      <MarketingHeader />
+      <main className="flex-grow flex items-center justify-center">
+        <h1 className="text-4xl font-bold text-black dark:text-white">Welcome to Our App</h1>
+        {/* Add more content for your landing page here */}
+      </main>
     </div>
   );
 }

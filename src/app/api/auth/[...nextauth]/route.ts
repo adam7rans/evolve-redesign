@@ -10,13 +10,14 @@ const handler = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
-      // You can add custom logic here if needed
       return true
     },
     async redirect({ url, baseUrl }) {
-      // Redirect to dashboard after sign in
-      return `${baseUrl}/dashboard`
+      return baseUrl + '/dashboard'
     },
+  },
+  pages: {
+    signIn: '/login',
   },
 })
 

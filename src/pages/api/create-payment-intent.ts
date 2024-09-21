@@ -12,20 +12,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      // Create a PaymentIntent with the order amount and currency
+      console.log('Creating PaymentIntent...');
       const paymentIntent = await stripe.paymentIntents.create({
         amount: 5000, // amount in cents
         currency: "usd",
-        automatic_payment_methods: {
-          enabled: true,
-        },
+        payment_method_types: ['card', 'link', 'paypal'],
       });
+      console.log('PaymentIntent created successfully');
 
       res.status(200).json({
         clientSecret: paymentIntent.client_secret,
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('Error creating PaymentIntent:', error);
+      res.status(500).json({ error: error.message, stack: error.stack });
     }
   } else {
     res.setHeader('Allow', 'POST');

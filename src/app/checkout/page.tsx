@@ -9,6 +9,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import GoogleAccountInfo from '@/components/GoogleAccountInfo';
+import { PaymentRequestButtonElement } from '@stripe/react-stripe-js';
 
 // Define the GoogleUser interface
 interface GoogleUser {
@@ -23,6 +24,7 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 export default function CheckoutPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Create PaymentIntent as soon as the page loads
@@ -31,9 +33,27 @@ export default function CheckoutPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: [{ id: "xl-tshirt" }] }),
     })
-      .then((res) => res.json())
-      .then((data) => setClientSecret(data.clientSecret));
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        setClientSecret(data.clientSecret);
+      })
+      .catch((err) => {
+        console.error("Error:", err);
+        setError(err.message);
+      });
   }, []);
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   if (!clientSecret) {
     return <div>Loading...</div>;
@@ -58,6 +78,7 @@ function CheckoutForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', content: '' });
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
+  const [confirmedUser, setConfirmedUser] = useState<{ email: string } | null>(null);
 
   useEffect(() => {
     if (searchParams) {
@@ -77,6 +98,17 @@ function CheckoutForm() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setConfirmedUser({ email: session.user.email! });
+      }
+    };
+
+    checkSession();
+  }, []);
+
   const handleEmailRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -84,9 +116,13 @@ function CheckoutForm() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
       if (error) throw error;
       setMessage({ type: 'success', content: 'Registration successful! Please check your email to verify your account.' });
+      setConfirmedUser({ email });
     } catch (error: any) {
       console.error('Error during registration:', error);
       setMessage({ type: 'error', content: error.message || 'Registration failed. Please try again.' });
@@ -153,6 +189,11 @@ function CheckoutForm() {
         
         {googleUser ? (
           <GoogleAccountInfo user={googleUser} />
+        ) : confirmedUser ? (
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <p className="text-black">Signed up with email:</p>
+            <p className="font-semibold text-black">{confirmedUser.email}</p>
+          </div>
         ) : (
           <>
             <Button onClick={handleGoogleRegistration} className="w-full mb-4 bg-white text-black border border-gray-300 hover:bg-gray-100">
@@ -190,11 +231,16 @@ function CheckoutForm() {
       <div className="w-full md:w-1/2 max-w-md">
         <h2 className="text-xl font-semibold mb-4 text-black dark:text-white">Payment</h2>
         <form onSubmit={handlePayment} className="w-full">
-          <PaymentElement className="mb-4" />
+          <PaymentElement 
+            className="mb-4"
+            options={{
+              paymentMethodOrder: ['paypal', 'card', 'link'],
+            }}
+          />
           <Button
             type="submit"
             className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700"
-            disabled={!stripe || isLoading || !googleUser}
+            disabled={!stripe || isLoading || (!googleUser && !confirmedUser)}
           >
             {isLoading ? <Spinner /> : 'Pay'}
           </Button>

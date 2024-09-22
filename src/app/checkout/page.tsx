@@ -77,39 +77,68 @@ function CheckoutForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', content: '' });
+  const [user, setUser] = useState<{ email: string; provider: string } | null>(null);
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
-  const [confirmedUser, setConfirmedUser] = useState<{ email: string } | null>(null);
-
-  useEffect(() => {
-    if (searchParams) {
-      const googleData = searchParams.get('googleData');
-      const error = searchParams.get('error');
-      if (googleData) {
-        try {
-          const parsedData = JSON.parse(decodeURIComponent(googleData));
-          setGoogleUser(parsedData);
-        } catch (error) {
-          console.error('Error parsing Google user data:', error);
-          setMessage({ type: 'error', content: 'Error processing Google account information.' });
-        }
-      } else if (error) {
-        setMessage({ type: 'error', content: 'Google sign-in was cancelled or failed. Please try again.' });
-      }
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        setConfirmedUser({ email: session.user.email! });
+        // Check if the user has already paid
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('has_paid')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (userData && userData.has_paid) {
+          router.push('/dashboard');
+          return;
+        }
+
+        if (session.user.app_metadata.provider === 'google') {
+          setGoogleUser({
+            name: session.user.user_metadata.full_name,
+            email: session.user.email!,
+            picture: session.user.user_metadata.avatar_url
+          });
+        } else {
+          setUser({ 
+            email: session.user.email!, 
+            provider: session.user.app_metadata.provider || 'email' 
+          });
+        }
       }
     };
 
     checkSession();
+
+    // Remove hash from URL if present
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const checkPaymentStatus = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('has_paid')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (userData && userData.has_paid) {
+          router.push('/dashboard');
+        }
+      }
+    };
+
+    checkPaymentStatus();
   }, []);
 
-  const handleEmailRegistration = async (e: React.FormEvent) => {
+  const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
@@ -120,23 +149,24 @@ function CheckoutForm() {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
+
       if (error) throw error;
-      setMessage({ type: 'success', content: 'Registration successful! Please check your email to verify your account.' });
-      setConfirmedUser({ email });
+
+      setMessage({ type: 'success', content: 'Sign up successful! Please check your email to verify your account.' });
     } catch (error: any) {
-      console.error('Error during registration:', error);
-      setMessage({ type: 'error', content: error.message || 'Registration failed. Please try again.' });
+      console.error('Error during sign up:', error);
+      setMessage({ type: 'error', content: error.message || 'Sign up failed. Please try again.' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleRegistration = async () => {
+  const handleGoogleSignUp = async () => {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/checkout`,
           scopes: 'email profile',
           queryParams: {
             access_type: 'offline',
@@ -146,9 +176,17 @@ function CheckoutForm() {
       });
       if (error) throw error;
     } catch (error: any) {
-      console.error('Error during Google sign-in:', error);
-      setMessage({ type: 'error', content: 'Google sign-in failed. Please try again.' });
+      console.error('Error during Google sign up:', error);
+      setMessage({ type: 'error', content: 'Google sign up failed. Please try again.' });
     }
+  };
+
+  const handleDisconnect = () => {
+    supabase.auth.signOut().then(() => {
+      setUser(null);
+      setGoogleUser(null);
+      setMessage({ type: '', content: '' });
+    });
   };
 
   const handlePayment = async (e: React.FormEvent) => {
@@ -166,43 +204,58 @@ function CheckoutForm() {
       if (result.error) {
         throw result.error;
       }
+      // Payment successful, but we don't need to do anything here
+      // as the user will be redirected to the payment confirmation page
     } catch (error: any) {
       setMessage({ type: 'error', content: error.message || 'Payment failed.' });
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col md:flex-row items-start justify-center p-4 bg-white dark:bg-gray-900">
-      {message.content && (
-        <div className={`w-full max-w-md p-2 mb-4 rounded ${
-          message.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-        }`}>
-          {message.content}
-        </div>
-      )}
-      
       {/* Left Column */}
       <div className="w-full md:w-1/2 max-w-md mb-8 md:mb-0 md:mr-8">
         <h2 className="text-xl font-semibold mb-4 text-black dark:text-white">Sign Up</h2>
         
         {googleUser ? (
-          <GoogleAccountInfo user={googleUser} />
-        ) : confirmedUser ? (
-          <div className="bg-gray-100 p-4 rounded-lg">
+          <div className="bg-gray-100 p-4 rounded-lg mb-4">
+            <GoogleAccountInfo user={googleUser} />
+            <button 
+              onClick={handleDisconnect}
+              className="text-blue-600 hover:text-blue-800 text-sm mt-2"
+            >
+              Choose a different Google account
+            </button>
+          </div>
+        ) : user ? (
+          <div className="bg-gray-100 p-4 rounded-lg mb-4">
             <p className="text-black">Signed up with email:</p>
-            <p className="font-semibold text-black">{confirmedUser.email}</p>
+            <p className="font-semibold text-black">{user.email}</p>
+            <button 
+              onClick={handleDisconnect}
+              className="text-blue-600 hover:text-blue-800 text-sm mt-2"
+            >
+              Choose different email and password
+            </button>
           </div>
         ) : (
           <>
-            <Button onClick={handleGoogleRegistration} className="w-full mb-4 bg-white text-black border border-gray-300 hover:bg-gray-100">
-              Connect with Google
+            <Button onClick={handleGoogleSignUp} className="w-full mb-4 bg-white text-black border border-gray-300 hover:bg-gray-100">
+              Sign Up with Google
             </Button>
 
             <div className="my-4 text-center text-gray-500">or</div>
 
-            <form onSubmit={handleEmailRegistration} className="w-full">
+            {message.content && (
+              <div className={`w-full p-2 mb-4 rounded ${
+                message.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+              }`}>
+                {message.content}
+              </div>
+            )}
+
+            <form onSubmit={handleEmailSignUp} className="w-full">
               <Input
                 type="email"
                 placeholder="Email"
@@ -234,13 +287,13 @@ function CheckoutForm() {
           <PaymentElement 
             className="mb-4"
             options={{
-              paymentMethodOrder: ['paypal', 'card', 'link'],
+              paymentMethodOrder: ['card', 'paypal'],
             }}
           />
           <Button
             type="submit"
             className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700"
-            disabled={!stripe || isLoading || (!googleUser && !confirmedUser)}
+            disabled={!stripe || isLoading || (!user && !googleUser)}
           >
             {isLoading ? <Spinner /> : 'Pay'}
           </Button>

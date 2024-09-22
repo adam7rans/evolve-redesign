@@ -5,10 +5,22 @@ import Link from "next/link";
 import { useTheme } from '@/contexts/ThemeContext';
 import FullLogo from '@/components/icons/sourceLogo';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from "@/components/ui/button";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter } from 'next/navigation';
+import { clearAuthData } from '@/lib/supabase';
 
 export function AppHeader() {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const router = useRouter();
+  const supabase = createClientComponentClient();
+
+  const handleSignOut = async () => {
+    await clearAuthData();
+    await signOut();
+    router.push('/login');
+  };
 
   return (
     <header className="flex h-24 w-full shrink-0 items-center px-4 md:px-6 bg-white dark:bg-gray-900 text-black dark:text-white">
@@ -26,6 +38,9 @@ export function AppHeader() {
           <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-200 dark:bg-gray-700">
             {theme === 'dark' ? "🌞" : "🌙"}
           </button>
+          <Button onClick={handleSignOut} variant="outline" className="text-sm">
+            Log Out
+          </Button>
         </div>
       </nav>
     </header>

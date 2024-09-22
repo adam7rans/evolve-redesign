@@ -6,17 +6,45 @@ import { User } from '@supabase/supabase-js'; // Import User type from Supabase
 
 interface AuthContextType {
   user: User | null;
-  logout: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  signOut: async () => {},
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+    };
+
+    checkUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        localStorage.removeItem('supabase.auth.token');
+      } else if (session?.user) {
+        // Verify the user exists in the database
+        const { data: userData, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (error || !userData) {
+          // If user doesn't exist in the database, sign out
+          await supabase.auth.signOut();
+          setUser(null);
+        } else {
+          setUser(session.user);
+        }
+      }
     });
 
     return () => {
@@ -24,13 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const logout = async () => {
+  const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, logout }}>
+    <AuthContext.Provider value={{ user, signOut }}>
       {children}
     </AuthContext.Provider>
   );

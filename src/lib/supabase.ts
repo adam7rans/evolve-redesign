@@ -35,3 +35,9 @@ export async function signUp(email: string, password: string) {
 }
 
 // Add any other Supabase-related functions here
+
+export const clearAuthData = async () => {
+  await supabase.auth.signOut();
+  localStorage.removeItem('supabase.auth.token');
+  // Add any other local storage items related to auth here
+};

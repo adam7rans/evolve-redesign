@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { Inter } from 'next/font/google';
 import localFont from "next/font/local";
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import "./globals.css";
 
+// Dynamically import client-side providers and components
 const ThemeProvider = dynamic(() => import('@/contexts/ThemeContext').then(mod => mod.ThemeProvider), { ssr: false });
 const AuthProvider = dynamic(() => import('@/contexts/AuthContext').then(mod => mod.AuthProvider), { ssr: false });
 const AppHeader = dynamic(() => import('@/components/AppHeader').then(mod => mod.AppHeader), { ssr: false });
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="en">
-      <body className={`${inter.className} ${geistSans.variable} ${geistMono.variable} bg-white dark:bg-gray-900 text-black dark:text-white`}>
+      <body className={`${inter.className} ${geistSans.variable} ${geistMono.variable} bg-background-light dark:bg-background-dark text-foreground-light dark:text-foreground-dark`}>
         <SessionProvider>
           <ThemeProvider>
             <AuthProvider>

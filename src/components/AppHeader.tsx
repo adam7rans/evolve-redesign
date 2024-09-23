@@ -6,20 +6,20 @@ import { useTheme } from '@/contexts/ThemeContext';
 import FullLogo from '@/components/icons/sourceLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
-import { clearAuthData } from '@/lib/supabase';
 
 export function AppHeader() {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
   const router = useRouter();
-  const supabase = createClientComponentClient();
 
   const handleSignOut = async () => {
-    await clearAuthData();
-    await signOut();
-    router.push('/login');
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (

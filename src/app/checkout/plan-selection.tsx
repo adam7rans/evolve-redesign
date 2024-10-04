@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch"; 
-import { useRouter } from 'next/navigation';
+import { setCookie, getCookie } from 'cookies-next';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 interface PlanPrice {
   id: string;
@@ -25,20 +26,43 @@ interface PlanSelectionProps {
   onSelectPlan: (planId: string, interval: 'month' | 'year') => void;
 }
 
-export default function PlanSelection({ plans, selectedPlan, billingInterval, onSelectPlan }: PlanSelectionProps) {
-  const [isYearly, setIsYearly] = useState(billingInterval === 'year');
-  const router = useRouter();
+export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan, billingInterval: initialBillingInterval, onSelectPlan }: PlanSelectionProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  
+  const [selectedPlanState, setSelectedPlanState] = useState<string | null>(initialSelectedPlan);
+  const [billingIntervalState, setBillingIntervalState] = useState<'month' | 'year'>(initialBillingInterval);
+  const [isYearly, setIsYearly] = useState(initialBillingInterval === 'year');
 
   useEffect(() => {
-    setIsYearly(billingInterval === 'year');
-  }, [billingInterval]);
+    const handleRouteChange = () => {
+      const cookiePlanId = getCookie('selectedPlanId') as string | undefined;
+      const cookieInterval = getCookie('selectedInterval') as 'month' | 'year' | undefined;
+
+      if (cookiePlanId) {
+        setSelectedPlanState(cookiePlanId);
+      }
+      if (cookieInterval) {
+        setBillingIntervalState(cookieInterval);
+        setIsYearly(cookieInterval === 'year');
+      }
+    };
+
+    // Call the function once on mount and whenever the route changes
+    handleRouteChange();
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
+    setIsYearly(billingIntervalState === 'year');
+  }, [billingIntervalState]);
 
   const handleIntervalChange = (checked: boolean) => {
     setIsYearly(checked);
     const newInterval = checked ? 'year' : 'month';
+    setBillingIntervalState(newInterval);
     
     // Find the current plan and update its interval
-    const currentPlan = plans.find(p => p.prices.some(price => price.id === selectedPlan));
+    const currentPlan = plans.find(p => p.prices.some(price => price.id === selectedPlanState));
     if (currentPlan) {
       const newPrice = currentPlan.prices.find(p => p.interval === newInterval);
       if (newPrice) {
@@ -47,8 +71,20 @@ export default function PlanSelection({ plans, selectedPlan, billingInterval, on
     }
   };
 
+  const handleSelectPlan = (priceId: string, interval: 'month' | 'year') => {
+    // Set the cookie
+    setCookie('selectedPlanId', priceId);
+    setCookie('selectedInterval', interval);
+
+    // Wait for a short time to ensure the cookie is set
+    setTimeout(() => {
+      onSelectPlan(priceId, interval);
+      window.location.href = '/checkout/signup';
+    }, 100);
+  };
+
   console.log('PlanSelection plans:', plans);
-  console.log('PlanSelection selectedPlan:', selectedPlan);
+  console.log('PlanSelection selectedPlan:', selectedPlanState);
 
   return (
     <div>
@@ -79,7 +115,7 @@ export default function PlanSelection({ plans, selectedPlan, billingInterval, on
               console.log('No price found for interval:', (isYearly ? 'year' : 'month'));
               return null;
             }
-            const isSelected = selectedPlan === price.id;
+            const isSelected = selectedPlanState === price.id;
             return (
               <div 
                 key={plan.id} 
@@ -102,10 +138,7 @@ export default function PlanSelection({ plans, selectedPlan, billingInterval, on
                   ))}
                 </ul>
                 <Button
-                  onClick={() => {
-                    onSelectPlan(price.id, price.interval);
-                    router.push('/checkout/signup');
-                  }}
+                  onClick={() => handleSelectPlan(price.id, price.interval)}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   Subscribe

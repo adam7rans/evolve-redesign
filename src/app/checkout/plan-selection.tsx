@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { setCookie, getCookie } from 'cookies-next';
 import { usePathname, useSearchParams } from 'next/navigation';
 
+// Define interfaces for the component's props and data structures
 interface PlanPrice {
   id: string;
   interval: 'month' | 'year';
@@ -26,14 +27,18 @@ interface PlanSelectionProps {
   onSelectPlan: (planId: string, interval: 'month' | 'year') => void;
 }
 
+// Main component for plan selection
 export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan, billingInterval: initialBillingInterval, onSelectPlan }: PlanSelectionProps) {
+  // Hooks for handling routing and navigation
   const pathname = usePathname();
   const searchParams = useSearchParams();
   
+  // State management for selected plan, billing interval, and yearly toggle
   const [selectedPlanState, setSelectedPlanState] = useState<string | null>(initialSelectedPlan);
   const [billingIntervalState, setBillingIntervalState] = useState<'month' | 'year'>(initialBillingInterval);
   const [isYearly, setIsYearly] = useState(initialBillingInterval === 'year');
 
+  // Effect to handle route changes and update state from cookies
   useEffect(() => {
     const handleRouteChange = () => {
       const cookiePlanId = getCookie('selectedPlanId') as string | undefined;
@@ -52,42 +57,36 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
     handleRouteChange();
   }, [pathname, searchParams]);
 
+  // Effect to sync isYearly state with billingIntervalState
   useEffect(() => {
     setIsYearly(billingIntervalState === 'year');
   }, [billingIntervalState]);
 
+  // Handler for changing billing interval
   const handleIntervalChange = (checked: boolean) => {
     setIsYearly(checked);
     const newInterval = checked ? 'year' : 'month';
     setBillingIntervalState(newInterval);
-    
-    // Find the current plan and update its interval
-    const currentPlan = plans.find(p => p.prices.some(price => price.id === selectedPlanState));
-    if (currentPlan) {
-      const newPrice = currentPlan.prices.find(p => p.interval === newInterval);
-      if (newPrice) {
-        onSelectPlan(newPrice.id, newInterval);
-      }
-    }
+    setCookie('selectedInterval', newInterval);
+    // Remove the onSelectPlan call from here
   };
 
-  const handleSelectPlan = (priceId: string, interval: 'month' | 'year') => {
-    // Set the cookie
-    setCookie('selectedPlanId', priceId);
+  // Handler for selecting a plan
+  const handleSelectPlan = (planId: string, interval: 'month' | 'year') => {
+    setSelectedPlanState(planId);
+    setBillingIntervalState(interval);
+    setCookie('selectedPlanId', planId);
     setCookie('selectedInterval', interval);
-
-    // Wait for a short time to ensure the cookie is set
-    setTimeout(() => {
-      onSelectPlan(priceId, interval);
-      window.location.href = '/checkout/signup';
-    }, 100);
+    onSelectPlan(planId, interval);
   };
 
+  // Debugging logs
   console.log('PlanSelection plans:', plans);
   console.log('PlanSelection selectedPlan:', selectedPlanState);
 
   return (
     <div>
+      {/* Billing interval toggle buttons */}
       <div className="flex justify-center items-center space-x-4 mb-8">
         <Button
           onClick={() => handleIntervalChange(false)}
@@ -104,6 +103,7 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
           Yearly
         </Button>
       </div>
+      {/* Plan cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {plans.length === 0 ? (
           <p>No plans available</p>

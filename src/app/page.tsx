@@ -1,31 +1,24 @@
-'use client';
+import { getProductsWithPrices } from '@/lib/stripe';
+import HomePageClient from './HomePageClient';
+import { cookies } from 'next/headers'
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { MarketingHeader } from '@/components/MarketingHeader';
+export default async function HomePage() {
+  const stripeProducts = await getProductsWithPrices();
+  const plans = stripeProducts.map(product => ({
+    id: product.id,
+    name: product.name,
+    prices: product.prices.map(price => ({
+      id: price.id,
+      interval: price.recurring?.interval === 'month' ? 'month' : 'year',
+      unit_amount: price.unit_amount || 0
+    })),
+    features: product.metadata.features ? JSON.parse(product.metadata.features) : []
+  }));
 
-export default function HomePage() {
-  const router = useRouter();
+  // Read the cookie
+  const cookieStore = cookies()
+  const selectedPlanCookie = cookieStore.get('selectedPlan')
+  const selectedPlan = selectedPlanCookie ? JSON.parse(selectedPlanCookie.value) : null
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        router.push('/dashboard');
-      }
-    };
-
-    checkUser();
-  }, [router]);
-
-  return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
-      <MarketingHeader />
-      <main className="flex-grow flex items-center justify-center">
-        <h1 className="text-4xl font-bold text-black dark:text-white">Welcome to Our App</h1>
-        {/* Add more content for your landing page here */}
-      </main>
-    </div>
-  );
+  return <HomePageClient plans={plans} initialSelectedPlan={selectedPlan} />;
 }

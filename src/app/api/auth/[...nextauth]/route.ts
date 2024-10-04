@@ -13,7 +13,23 @@ const handler = NextAuth({
       return true
     },
     async redirect({ url, baseUrl }) {
-      return baseUrl + '/dashboard'
+      console.log('NextAuth redirect - Original URL:', url);
+      
+      // Extract planId and interval from the original URL
+      const urlParams = new URL(url).searchParams;
+      const planId = urlParams.get('planId');
+      const interval = urlParams.get('interval');
+      
+      console.log('NextAuth redirect - Extracted params:', { planId, interval });
+
+      // Construct the payment URL with parameters
+      const paymentUrl = new URL('/checkout/payment', baseUrl);
+      if (planId) paymentUrl.searchParams.set('planId', planId);
+      if (interval) paymentUrl.searchParams.set('interval', interval);
+
+      console.log('NextAuth redirect - Constructed payment URL:', paymentUrl.toString());
+
+      return paymentUrl.toString();
     },
   },
   pages: {

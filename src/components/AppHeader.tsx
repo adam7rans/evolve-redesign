@@ -6,20 +6,13 @@ import { useTheme } from '@/contexts/ThemeContext';
 import FullLogo from '@/components/icons/sourceLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
-import { useRouter } from 'next/navigation';
 
 export function AppHeader() {
   const { theme, toggleTheme } = useTheme();
-  const { user, signOut } = useAuth();
-  const router = useRouter();
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.push('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
+    await signOut();
   };
 
   return (

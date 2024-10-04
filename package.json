@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "update-types": "supabase gen types typescript --project-id nvioroyvqnvvdxekohca > src/types/supabase.ts"
   },
   "dependencies": {
+    "@heroicons/react": "^2.1.5",
     "@hookform/resolvers": "^3.9.0",
     "@paypal/react-paypal-js": "^8.7.0",
     "@radix-ui/react-checkbox": "^1.1.1",
@@ -24,9 +26,11 @@
     "@supabase/supabase-js": "^2.45.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "js-cookie": "^3.0.5",
     "lucide-react": "^0.439.0",
     "next": "^14.2.13",
     "next-auth": "^4.24.7",
+    "next-themes": "^0.3.0",
     "react": "^18.3.1",
     "react-dom": "^18",
     "react-hook-form": "^7.53.0",
@@ -42,6 +46,8 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/stripe": "^8.0.416",
+    "@types/stripe-v3": "^3.1.33",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "autoprefixer": "^10.4.14",

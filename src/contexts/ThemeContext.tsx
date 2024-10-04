@@ -1,65 +1,56 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-type Theme = 'light' | 'dark';
+import { createContext, useContext, ReactNode, useEffect, useState } from 'react';
+import { ThemeProvider as NextThemesProvider, useTheme as useNextThemes } from 'next-themes';
+import type { ThemeProviderProps as NextThemeProviderProps } from 'next-themes/dist/types';
 
 interface ThemeContextType {
-  theme: Theme;
+  theme: string | undefined;
+  setTheme: (theme: string) => void;
   toggleTheme: () => void;
+  resolvedTheme: string | undefined;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType>({
+  theme: 'system',
+  setTheme: () => {},
+  toggleTheme: () => {},
+  resolvedTheme: 'light',
+});
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+interface ThemeProviderProps extends NextThemeProviderProps {
+  children: ReactNode;
+}
+
+export const ThemeProvider = ({ children, ...props }: ThemeProviderProps) => {
+  return (
+    <NextThemesProvider {...props}>
+      <ThemeContextContent>{children}</ThemeContextContent>
+    </NextThemesProvider>
+  );
+};
+
+const ThemeContextContent = ({ children }: { children: ReactNode }) => {
+  const { theme, setTheme, systemTheme, resolvedTheme } = useNextThemes();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const themeCookie = document.cookie.split('; ').find(row => row.startsWith('theme='));
-    const storedTheme = localStorage.getItem('theme') as Theme | null;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    console.log('Theme cookie:', themeCookie ? themeCookie.split('=')[1] : 'not set');
-    console.log('Stored theme:', storedTheme);
-    console.log('Detected system theme preference:', prefersDark ? 'dark' : 'light');
-
-    // Always use system preference
-    const initialTheme: Theme = prefersDark ? 'dark' : 'light';
-    console.log('Using system preference:', initialTheme);
-
-    console.log('Initial theme set to:', initialTheme);
-    setTheme(initialTheme);
-
-    // Clear any existing user preference
-    localStorage.removeItem('theme');
-    document.cookie = 'theme=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    setMounted(true);
   }, []);
 
-  useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-    console.log('Applied theme:', theme);
-  }, [theme]);
-
   const toggleTheme = () => {
-    setTheme(prev => {
-      const newTheme = prev === 'light' ? 'dark' : 'light';
-      // When user toggles, we store their preference
-      localStorage.setItem('theme', newTheme);
-      document.cookie = `theme=${newTheme}; path=/; max-age=31536000`; // Set the theme cookie with 1 year expiration
-      return newTheme;
-    });
+    if (theme === 'system') {
+      setTheme(systemTheme === 'dark' ? 'light' : 'dark');
+    } else {
+      setTheme(theme === 'dark' ? 'light' : 'dark');
+    }
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, resolvedTheme: mounted ? resolvedTheme : undefined }}>
       {children}
     </ThemeContext.Provider>
   );
-}
+};
 
-export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (!context) throw new Error('useTheme must be used within a ThemeProvider');
-  return context;
-}
+export const useTheme = () => useContext(ThemeContext);

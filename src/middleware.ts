@@ -2,63 +2,64 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
+// List of routes that require payment, including sub-routes
+const paidRoutes = [
+  '/dashboard',
+  '/settings',
+  '/written',
+  '/encrypted',
+  '/transformer',
+  '/rituals'
+];
+
+// Middleware function to handle authentication and payment status checks
 export async function middleware(req: NextRequest) {
-  console.log('Middleware called for path:', req.nextUrl.pathname);
-  
+  // Create a new response object
   const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
   
+  // Initialize Supabase client for server-side operations
+  const supabase = createMiddlewareClient({ req, res });
+
+  // Retrieve the current session from Supabase
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  console.log('Session found:', !!session);
+  // Check if the current path starts with any of the paid routes
+  const isAccessingPaidRoute = paidRoutes.some(route => 
+    req.nextUrl.pathname === route || req.nextUrl.pathname.startsWith(`${route}/`)
+  );
 
   if (session) {
-    try {
-      const { data: profileData, error } = await supabase
-        .from('user_profiles')
-        .select('has_paid')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+    // If a session exists, check the user's payment status
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('has_paid')
+      .eq('user_id', session.user.id)
+      .single();
 
-      console.log('User profile data:', profileData, 'Error:', error);
+    // Determine if the user has paid, defaulting to false if no data is found
+    const hasPaid = profile?.has_paid ?? false;
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        // Allow access if there's an error fetching the profile
-        return res;
-      }
-
-      if (profileData && profileData.has_paid) {
-        if (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/checkout') {
-          console.log('Paid user redirected from login/checkout to dashboard');
-          return NextResponse.redirect(new URL('/dashboard', req.url));
-        }
-      } else {
-        if (req.nextUrl.pathname === '/dashboard') {
-          console.log('Unpaid user redirected from dashboard to checkout');
-          return NextResponse.redirect(new URL('/checkout', req.url));
-        }
-      }
-    } catch (error) {
-      console.error('Unexpected error in middleware:', error);
-      // Allow access if there's an unexpected error
-      return res;
+    // If the user hasn't paid and is trying to access a paid route, redirect to checkout
+    if (!hasPaid && isAccessingPaidRoute) {
+      return NextResponse.redirect(new URL('/checkout', req.url));
+    } else if (hasPaid && !isAccessingPaidRoute && req.nextUrl.pathname !== '/dashboard') {
+      // IF hasSession && hasPaid AND the user is trying to access other routes besides isAccessingPaidRoute THEN redirect to /dashboard
+      return NextResponse.redirect(new URL('/dashboard', req.url));
     }
   } else {
-    if (req.nextUrl.pathname === '/dashboard') {
-      console.log('Unauthenticated user redirected from dashboard to login');
+    // If no session and user tries to access a paid route, redirect to login
+    if (isAccessingPaidRoute) {
       return NextResponse.redirect(new URL('/login', req.url));
     }
   }
 
-  console.log('Middleware allowing access to:', req.nextUrl.pathname);
+  // If all checks pass, continue with the request
   return res;
 }
 
+// Configuration for which routes the middleware should run on
 export const config = {
-  matcher: ['/login', '/checkout', '/dashboard'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

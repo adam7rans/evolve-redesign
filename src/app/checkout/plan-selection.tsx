@@ -35,13 +35,14 @@ export default function PlanSelection({ plans, selectedPlan, billingInterval, on
 
   const handleIntervalChange = (checked: boolean) => {
     setIsYearly(checked);
-    if (selectedPlan) {
-      const selectedPlanDetails = plans.find(p => p.prices.some(price => price.id === selectedPlan));
-      if (selectedPlanDetails) {
-        const newPrice = selectedPlanDetails.prices.find(p => p.interval === (checked ? 'year' : 'month'));
-        if (newPrice) {
-          onSelectPlan(newPrice.id, newPrice.interval);
-        }
+    const newInterval = checked ? 'year' : 'month';
+    
+    // Find the current plan and update its interval
+    const currentPlan = plans.find(p => p.prices.some(price => price.id === selectedPlan));
+    if (currentPlan) {
+      const newPrice = currentPlan.prices.find(p => p.interval === newInterval);
+      if (newPrice) {
+        onSelectPlan(newPrice.id, newInterval);
       }
     }
   };
@@ -103,7 +104,7 @@ export default function PlanSelection({ plans, selectedPlan, billingInterval, on
                 <Button
                   onClick={() => {
                     onSelectPlan(price.id, price.interval);
-                    router.push(`/checkout/signup?planId=${price.id}&interval=${price.interval}`);
+                    router.push('/checkout/signup');
                   }}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >

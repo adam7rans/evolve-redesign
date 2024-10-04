@@ -15,9 +15,9 @@ export default function HomePageClient({ plans, initialSelectedPlan }: HomePageC
 
   const handleSelectPlan = (priceId: string, interval: 'month' | 'year') => {
     setSelectedPlan({ priceId, interval });
-    // You can set the cookie here if you want it to be immediately available
+    // Set the cookie
     document.cookie = `selectedPlan=${JSON.stringify({ priceId, interval })}; path=/; max-age=604800`; // expires in 7 days
-    router.push(`/checkout/signup?planId=${priceId}&interval=${interval}`);
+    router.push('/checkout/signup');
   };
 
   return (

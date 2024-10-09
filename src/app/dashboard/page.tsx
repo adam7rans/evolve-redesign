@@ -2,7 +2,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import DashboardClient from './dashboard-client'
-import { AppHeader } from '@/components/AppHeader'
+import { AppHeader } from '@/components/shared/AppHeader'
 import { Sidebar } from './Sidebar'
 
 export default async function DashboardPage() {

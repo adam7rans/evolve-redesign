@@ -10,10 +10,15 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 interface PaymentMethodProps {
   user: User | null;
   clientSecret: string | null;
-  selectedPlanId: string;
+  selectedPlan: {
+    priceId: string;
+    interval: 'month' | 'year';
+    name: string;
+    price: number;
+  } | null;
 }
 
-function PaymentMethodContent({ user, selectedPlanId }: PaymentMethodProps) {
+function PaymentMethodContent({ user, selectedPlan }: PaymentMethodProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +58,7 @@ function PaymentMethodContent({ user, selectedPlanId }: PaymentMethodProps) {
   );
 }
 
-export default function PaymentMethod({ user, clientSecret, selectedPlanId }: PaymentMethodProps) {
+export default function PaymentMethod({ user, clientSecret, selectedPlan }: PaymentMethodProps) {
   if (!user) {
     return <div>Please sign in to continue with payment.</div>;
   }
@@ -64,7 +69,7 @@ export default function PaymentMethod({ user, clientSecret, selectedPlanId }: Pa
 
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
-      <PaymentMethodContent user={user} clientSecret={clientSecret} selectedPlanId={selectedPlanId} />
+      <PaymentMethodContent user={user} clientSecret={clientSecret} selectedPlan={selectedPlan} />
     </Elements>
   );
 }

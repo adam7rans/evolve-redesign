@@ -8,6 +8,12 @@ import { useSearchParams } from 'next/navigation';
 
 interface SignUpFormProps {
   onSignUp: (user: User) => void;
+  selectedPlan: {
+    priceId: string;
+    interval: 'month' | 'year';
+    name: string;
+    price: number;
+  } | null;
 }
 
 export default function SignUpForm({ onSignUp }: SignUpFormProps) {
@@ -65,7 +71,7 @@ export default function SignUpForm({ onSignUp }: SignUpFormProps) {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
+          <span className="px-2 text-muted-foreground">
             Or continue with
           </span>
         </div>

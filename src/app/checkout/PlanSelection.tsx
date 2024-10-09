@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch"; 
 import { setCookie, getCookie } from 'cookies-next';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 // Define interfaces for the component's props and data structures
 interface PlanPrice {
@@ -32,6 +33,7 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
   // Hooks for handling routing and navigation
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   
   // State management for selected plan, billing interval, and yearly toggle
   const [selectedPlanState, setSelectedPlanState] = useState<string | null>(initialSelectedPlan);
@@ -75,9 +77,18 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
   const handleSelectPlan = (planId: string, interval: 'month' | 'year') => {
     setSelectedPlanState(planId);
     setBillingIntervalState(interval);
-    setCookie('selectedPlanId', planId);
-    setCookie('selectedInterval', interval);
-    onSelectPlan(planId, interval);
+    const selectedPlan = plans.find(plan => plan.prices.some(price => price.id === planId));
+    if (selectedPlan) {
+      const price = selectedPlan.prices.find(p => p.id === planId);
+      setCookie('selectedPlan', JSON.stringify({
+        priceId: planId,
+        interval: interval,
+        name: selectedPlan.name,
+        price: price ? price.unit_amount / 100 : 0
+      }));
+      onSelectPlan(planId, interval);
+      router.push('/checkout?step=signup');
+    }
   };
 
   // Debugging logs

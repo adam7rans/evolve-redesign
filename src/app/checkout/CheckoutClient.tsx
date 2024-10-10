@@ -35,6 +35,7 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
     name: string;
     price: number;
   } | null>(null);
+  const [plans, setPlans] = useState<any[]>([]);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -72,6 +73,17 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
       setSelectedPlan({ priceId: planData.priceId, interval: planData.interval });
       updateStepCompletion('Plan Selection', true);
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      // Replace this with your actual API call to fetch plans
+      const response = await fetch('/api/plans');
+      const data = await response.json();
+      setPlans(data);
+    };
+
+    fetchPlans();
   }, []);
 
   const updateStepCompletion = (stepName: string, completed: boolean) => {
@@ -121,7 +133,7 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
     switch (currentStep) {
       case 'plan':
         return <PlanSelection
-          plans={[]} // Pass your plans data here
+          plans={plans} // Pass the plans data here
           selectedPlan={selectedPlan?.priceId || null}
           billingInterval={selectedPlan?.interval || 'month'}
           onSelectPlan={handleSelectPlan}

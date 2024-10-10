@@ -9,6 +9,7 @@ import PlanSelection from './PlanSelection';
 import SignUpForm from './SignUpForm';
 import PaymentMethod from './PaymentMethod';
 import { Progress } from "@/components/ui/progress";
+import Link from 'next/link';
 
 interface Step {
   name: string;
@@ -152,51 +153,56 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
   };
 
   const getProgressValue = () => {
-    switch (currentStep) {
-      case 'plan':
-        return 33;
-      case 'signup':
-        return 66;
-      case 'payment':
-        return 100;
-      default:
-        return 0;
-    }
+    const stepIndex = steps.findIndex(step => step.href.includes(currentStep));
+    if (stepIndex === -1) return 0;
+    
+    // Calculate progress based on completed steps
+    const completedSteps = steps.slice(0, stepIndex).filter(step => step.completed).length;
+    
+    // If we're on the first step and it's not completed, return 0
+    if (stepIndex === 0 && !steps[0].completed) return 0;
+    
+    // Calculate progress percentage
+    const progress = (completedSteps / (steps.length - 1)) * 100;
+    
+    return Math.min(progress, 100); // Ensure we don't exceed 100%
   };
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        <nav aria-label="Progress" className="mt-8">
-          <Progress value={getProgressValue()} className="mb-4" />
-          <ol role="list" className="flex items-center justify-between w-full">
-            {steps.map((step, stepIdx) => (
-              <li key={step.name} className={`flex-1 ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20' : ''}`}>
-                <div className="relative flex flex-col items-center">
-                  <button
-                    onClick={() => handleStepClick(step)}
-                    className={`h-9 flex items-center ${
-                      step.completed ? 'cursor-pointer text-blue-600' : 'cursor-not-allowed text-gray-400'
+        <nav aria-label="Progress" className="mt-16 relative">
+          <div className="relative">
+            <Progress value={getProgressValue()} className="w-full h-12" />
+            <ol className="flex justify-between w-full absolute top-0 left-0 right-0 bottom-0">
+              {steps.map((step, index) => (
+                <li key={step.name} className={`flex items-center ${
+                  index === 0 ? 'justify-start' : 
+                  index === 1 ? 'justify-center' : 
+                  'justify-end'
+                }`}>
+                  <Link
+                    href={step.href}
+                    className={`h-full flex items-center px-4 py-2 rounded-md transition-colors ${
+                      step.href.includes(currentStep)
+                        ? 'bg-blue-600 dark:bg-blue-500 cursor-default'
+                        : step.completed 
+                          ? 'cursor-pointer hover:bg-blue-700 dark:hover:bg-blue-600' 
+                          : 'cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600'
                     }`}
-                    disabled={!step.completed}
                   >
-                    <span className="relative z-10 w-8 h-8 flex items-center justify-center bg-white border-2 border-blue-600 rounded-full">
-                      {step.completed ? (
-                        <svg className="w-5 h-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                        </svg>
-                      ) : (
-                        <span>{stepIdx + 1}</span>
-                      )}
+                    <span className={`text-sm font-medium ${
+                      step.href.includes(currentStep) || step.completed
+                        ? 'text-white dark:text-gray-200' 
+                        : 'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {step.name}
                     </span>
-                  </button>
-                  <span className={`mt-2 text-xs font-medium text-center ${step.completed ? 'text-blue-600' : 'text-gray-400'}`}>
-                    {step.name}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ol>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </div>
         </nav>
         <div className="mt-8">
           {renderCurrentStep()}

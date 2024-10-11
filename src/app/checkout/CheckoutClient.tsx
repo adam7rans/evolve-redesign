@@ -10,6 +10,7 @@ import SignUpForm from './SignUpForm';
 import PaymentMethod from './PaymentMethod';
 import { Progress } from "@/components/ui/progress";
 import Link from 'next/link';
+import SelectedPlan from './SelectedPlan';
 
 interface Step {
   name: string;
@@ -140,13 +141,26 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
           onSelectPlan={handleSelectPlan}
         />;
       case 'signup':
-        return <SignUpForm onSignUp={handleSignUp} selectedPlan={selectedPlanDetails} />;
       case 'payment':
-        return <PaymentMethod
-          user={user}
-          clientSecret={clientSecret}
-          selectedPlan={selectedPlanDetails}
-        />;
+        return (
+          <div className="flex flex-col md:flex-row">
+            <div className="w-full md:w-1/3 pr-4">
+              <SelectedPlan onChangePlan={handleChangePlan} />
+            </div>
+            <div className="w-full md:w-1/3">
+              {currentStep === 'signup' ? (
+                <SignUpForm onSignUp={handleSignUp} selectedPlan={selectedPlanDetails} />
+              ) : (
+                <PaymentMethod
+                  user={user}
+                  clientSecret={clientSecret}
+                  selectedPlan={selectedPlanDetails}
+                />
+              )}
+            </div>
+            <div className="w-full md:w-1/3"></div>
+          </div>
+        );
       default:
         return null;
     }
@@ -169,10 +183,10 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full">
         <nav aria-label="Progress" className="mt-16 relative">
-          <div className="relative">
+          <div className="relative w-full">
             <Progress value={getProgressValue()} className="w-full h-12" />
             <ol className="flex justify-between w-full absolute top-0 left-0 right-0 bottom-0">
               {steps.map((step, index) => (
@@ -188,8 +202,13 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
                         ? 'bg-blue-600 dark:bg-blue-500 cursor-default'
                         : step.completed 
                           ? 'cursor-pointer hover:bg-blue-700 dark:hover:bg-blue-600' 
-                          : 'cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600'
+                          : 'cursor-not-allowed bg-gray-300 dark:bg-gray-600 opacity-50'
                     }`}
+                    onClick={(e) => {
+                      if (!step.completed) {
+                        e.preventDefault();
+                      }
+                    }}
                   >
                     <span className={`text-sm font-medium ${
                       step.href.includes(currentStep) || step.completed
@@ -204,7 +223,7 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
             </ol>
           </div>
         </nav>
-        <div className="mt-8">
+        <div className="mt-8 w-full">
           {renderCurrentStep()}
         </div>
       </div>

@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch"; 
-import { setCookie, getCookie } from 'cookies-next';
+import { setCookie, getCookie, deleteCookie } from 'cookies-next';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 
@@ -39,25 +38,42 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
   const [selectedPlanState, setSelectedPlanState] = useState<string | null>(initialSelectedPlan);
   const [billingIntervalState, setBillingIntervalState] = useState<'month' | 'year'>(initialBillingInterval);
   const [isYearly, setIsYearly] = useState(initialBillingInterval === 'year');
+  const [cookiePlanExists, setCookiePlanExists] = useState(false);
+  const [selectedPlanFromCookie, setSelectedPlanFromCookie] = useState<string | null>(null);
 
   // Effect to handle route changes and update state from cookies
   useEffect(() => {
-    const handleRouteChange = () => {
-      const cookiePlanId = getCookie('selectedPlanId') as string | undefined;
-      const cookieInterval = getCookie('selectedInterval') as 'month' | 'year' | undefined;
-
-      if (cookiePlanId) {
-        setSelectedPlanState(cookiePlanId);
+    const reset = searchParams.get('reset');
+    if (reset === 'true') {
+      // Reset all states
+      setSelectedPlanState(null);
+      setBillingIntervalState('month');
+      setIsYearly(false);
+      setCookiePlanExists(false);
+      setSelectedPlanFromCookie(null);
+      
+      // Remove the reset parameter from the URL
+      router.replace('/checkout?step=plan');
+    } else {
+      // Existing logic to load from cookie
+      const cookiePlan = getCookie('selectedPlan');
+      if (cookiePlan) {
+        setCookiePlanExists(true);
+        try {
+          const parsedPlan = JSON.parse(cookiePlan as string);
+          setSelectedPlanState(parsedPlan.priceId);
+          setSelectedPlanFromCookie(parsedPlan.priceId);
+          setBillingIntervalState(parsedPlan.interval);
+          setIsYearly(parsedPlan.interval === 'year');
+        } catch (error) {
+          console.error('Error parsing selectedPlan cookie:', error);
+        }
+      } else {
+        setCookiePlanExists(false);
+        setSelectedPlanFromCookie(null);
       }
-      if (cookieInterval) {
-        setBillingIntervalState(cookieInterval);
-        setIsYearly(cookieInterval === 'year');
-      }
-    };
-
-    // Call the function once on mount and whenever the route changes
-    handleRouteChange();
-  }, [pathname, searchParams]);
+    }
+  }, [pathname, searchParams, router]);
 
   // Effect to sync isYearly state with billingIntervalState
   useEffect(() => {
@@ -70,7 +86,6 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
     const newInterval = checked ? 'year' : 'month';
     setBillingIntervalState(newInterval);
     setCookie('selectedInterval', newInterval);
-    // Remove the onSelectPlan call from here
   };
 
   // Handler for selecting a plan
@@ -94,6 +109,11 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
   // Debugging logs
   console.log('PlanSelection plans:', plans);
   console.log('PlanSelection selectedPlan:', selectedPlanState);
+
+  const getButtonLabel = (isSelected: boolean) => {
+    if (!cookiePlanExists) return "Subscribe";
+    return isSelected ? "Selected" : "Select";
+  };
 
   return (
     <div>
@@ -126,7 +146,7 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
               console.log('No price found for interval:', (isYearly ? 'year' : 'month'));
               return null;
             }
-            const isSelected = selectedPlanState === price.id;
+            const isSelected = selectedPlanState === price.id || selectedPlanFromCookie === price.id;
             return (
               <div 
                 key={plan.id} 
@@ -150,9 +170,14 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
                 </ul>
                 <Button
                   onClick={() => handleSelectPlan(price.id, price.interval)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className={`w-full ${
+                    isSelected 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white`}
+                  disabled={isSelected && cookiePlanExists}
                 >
-                  Subscribe
+                  {getButtonLabel(isSelected)}
                 </Button>
               </div>
             );

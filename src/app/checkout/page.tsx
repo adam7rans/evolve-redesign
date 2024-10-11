@@ -19,7 +19,7 @@ export default function CheckoutPage() {
   }, [searchParams, router]);
 
   return (
-    <div className="container mx-auto p-4 max-w-3xl">
+    <div className="container mx-auto p-4 max-w-5xl">
       <h1 className="text-2xl font-bold mb-4 text-center">Checkout</h1>
       <CheckoutClient currentStep={step} />
     </div>

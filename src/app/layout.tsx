@@ -37,7 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <AnimatedBackground />
             <div className="relative z-10 flex flex-col min-h-screen">
               {session ? <AppHeader /> : <PrelaunchHeader />}
-              <main className="flex-grow">
+              <main className="flex-grow w-full">
                 {children}
               </main>
               <Footer />

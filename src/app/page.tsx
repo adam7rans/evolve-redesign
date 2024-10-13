@@ -20,5 +20,7 @@ export default async function HomePage() {
   const selectedPlanCookie = cookieStore.get('selectedPlan')
   const selectedPlan = selectedPlanCookie ? JSON.parse(selectedPlanCookie.value) : null
 
-  return <HomePageClient plans={plans} initialSelectedPlan={selectedPlan} />;
+  return (
+    <HomePageClient plans={plans} initialSelectedPlan={selectedPlan} />
+  );
 }

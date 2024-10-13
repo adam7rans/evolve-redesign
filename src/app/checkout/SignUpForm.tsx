@@ -61,7 +61,7 @@ export default function SignUpForm({ onSignUp }: SignUpFormProps) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/checkout/payment&planId=${planId}&interval=${interval}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/checkout?step=payment`,
         queryParams: {
           prompt: 'select_account',
         },
@@ -77,6 +77,7 @@ export default function SignUpForm({ onSignUp }: SignUpFormProps) {
 
   return (
     <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-center mb-6">Sign Up</h2>
       <div className="flex flex-col space-y-4">
         <Button 
           onClick={() => handleOAuthSignUp('google')} 

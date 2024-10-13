@@ -135,7 +135,7 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
     switch (currentStep) {
       case 'plan':
         return <PlanSelection
-          plans={plans} // Pass the plans data here
+          plans={plans}
           selectedPlan={selectedPlan?.priceId || null}
           billingInterval={selectedPlan?.interval || 'month'}
           onSelectPlan={handleSelectPlan}
@@ -143,11 +143,11 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
       case 'signup':
       case 'payment':
         return (
-          <div className="flex flex-col md:flex-row">
-            <div className="w-full md:w-1/3 pr-4">
+          <div className="flex flex-col w-full">
+            <div className="w-full mb-6">
               <SelectedPlan onChangePlan={handleChangePlan} />
             </div>
-            <div className="w-full md:w-1/3">
+            <div className="w-full md:w-2/3 mx-auto">
               {currentStep === 'signup' ? (
                 <SignUpForm onSignUp={handleSignUp} selectedPlan={selectedPlanDetails} />
               ) : (
@@ -158,7 +158,6 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
                 />
               )}
             </div>
-            <div className="w-full md:w-1/3"></div>
           </div>
         );
       default:

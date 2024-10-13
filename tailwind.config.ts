@@ -7,25 +7,38 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  darkMode: 'class', // Ensure this is set to 'class'
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         background: {
-          light: '#ffffff', // Light mode background
-          dark: '#0a0a0a',  // Dark mode background
+          light: '#ffffff',
+          dark: '#0a0a0a',
         },
         foreground: {
-          light: '#171717', // Light mode foreground
-          dark: '#ededed',  // Dark mode foreground
+          light: '#171717',
+          dark: '#ededed',
         },
         primary: {
-          light: '#3b82f6', // Example color for light mode
-          dark: '#60a5fa',  // Example color for dark mode
+          light: '#3b82f6',
+          dark: '#60a5fa',
         },
         secondary: {
-          light: '#e5e7eb', // Example color for light mode
-          dark: '#4b5563',  // Example color for dark mode
+          light: '#e5e7eb',
+          dark: '#4b5563',
+        },
+        // New color palette
+        palette: {
+          blue: '#000AFF',
+          pink: '#FE0164',
+          black: '#000000',
+          white: '#FFFFFF',
+          purple: '#5C00FE',
+          cyan: '#02FFC4',
+          yellow: '#FEF12D',
+          skyBlue: '#00B3FF',
+          beige: '#FEF3B5',
+          mint: '#B4FFED',
         },
       },
       backgroundImage: {

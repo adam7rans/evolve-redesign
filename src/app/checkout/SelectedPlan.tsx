@@ -51,13 +51,15 @@ export default function SelectedPlan({ onChangePlan }: SelectedPlanProps) {
   }
 
   return (
-    <div className="bg-slate-800 text-white p-4 rounded-lg">
-      <h3 className="text-lg font-semibold mb-2">{planData.name}</h3>
-      <p className="mb-2">{planData.interval === 'month' ? 'Monthly' : 'Yearly'} Plan</p>
-      <p className="text-2xl font-bold mb-4">${planData.price} per {planData.interval}</p>
+    <div className="bg-slate-800 text-white p-4 rounded-lg w-full flex justify-between items-center">
+      <div className="flex items-center space-x-4">
+        <h3 className="text-lg font-semibold">{planData.name}</h3>
+        <p>{planData.interval === 'month' ? 'Monthly' : 'Yearly'}</p>
+        <p className="text-lg font-bold">${planData.price} per {planData.interval}</p>
+      </div>
       <Button
         onClick={handleChangePlan}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+        className="bg-blue-600 hover:bg-blue-700 text-white"
       >
         Change Plan
       </Button>

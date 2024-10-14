@@ -11,6 +11,7 @@ import PaymentMethod from './PaymentMethod';
 import { Progress } from "@/components/ui/progress";
 import Link from 'next/link';
 import SelectedPlan from './SelectedPlan';
+import GoogleAccountInfo, { GoogleUser } from './GoogleAccountInfo';
 
 interface Step {
   name: string;
@@ -38,6 +39,7 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
     price: number;
   } | null>(null);
   const [plans, setPlans] = useState<any[]>([]);
+  const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -46,9 +48,18 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('Fetched user:', user);
       setUser(user);
       if (user) {
         updateStepCompletion('Sign Up', true);
+        // Use user metadata directly
+        const googleUserInfo: GoogleUser = {
+          name: user.user_metadata.full_name || '',
+          email: user.email || '',
+          picture: user.user_metadata.avatar_url || ''
+        };
+        console.log('Setting Google user:', googleUserInfo);
+        setGoogleUser(googleUserInfo);
       }
     };
 
@@ -89,11 +100,17 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
   }, []);
 
   const updateStepCompletion = (stepName: string, completed: boolean) => {
-    setSteps((prevSteps: Step[]) => 
-      prevSteps.map((step: Step) => 
+    setSteps((prevSteps: Step[]) => {
+      const updatedSteps = prevSteps.map((step: Step) => 
         step.name === stepName ? { ...step, completed } : step
-      )
-    );
+      );
+      // Ensure all previous steps are marked as completed
+      const currentStepIndex = updatedSteps.findIndex(step => step.name === stepName);
+      for (let i = 0; i < currentStepIndex; i++) {
+        updatedSteps[i].completed = true;
+      }
+      return updatedSteps;
+    });
   };
 
   const handleSelectPlan = (priceId: string, interval: 'month' | 'year') => {
@@ -108,17 +125,6 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
     router.push('/checkout?step=payment');
   };
 
-  const fetchClientSecret = async () => {
-    // Implement API call to fetch client secret
-    // setClientSecret(response.clientSecret);
-  };
-
-  useEffect(() => {
-    if (user && currentStep === 'payment') {
-      fetchClientSecret();
-    }
-  }, [user, currentStep]);
-
   const handleChangePlan = () => {
     router.push('/checkout?step=plan');
   };
@@ -132,6 +138,9 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
   const showSelectedPlan = currentStep === 'signup' || currentStep === 'payment';
 
   const renderCurrentStep = () => {
+    console.log('Rendering current step:', currentStep);
+    console.log('Google user state:', googleUser);
+
     switch (currentStep) {
       case 'plan':
         return <PlanSelection
@@ -147,13 +156,28 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
             <div className="w-full mb-6">
               <SelectedPlan onChangePlan={handleChangePlan} />
             </div>
+            {googleUser ? (
+              <div className="w-full mb-6">
+                <GoogleAccountInfo 
+                  user={googleUser} 
+                  onChooseAnotherAccount={() => {
+                    console.log('Choosing another account');
+                    setGoogleUser(null);
+                    setUser(null);
+                    updateStepCompletion('Sign Up', false);
+                    router.push('/checkout?step=signup');
+                  }} 
+                />
+              </div>
+            ) : (
+              <div>No Google user data available</div>
+            )}
             <div className="w-full md:w-2/3 mx-auto">
               {currentStep === 'signup' ? (
                 <SignUpForm onSignUp={handleSignUp} selectedPlan={selectedPlanDetails} />
               ) : (
                 <PaymentMethod
                   user={user}
-                  clientSecret={clientSecret}
                   selectedPlan={selectedPlanDetails}
                 />
               )}

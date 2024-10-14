@@ -3,7 +3,6 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import DashboardClient from './dashboard-client'
 import { AppHeader } from '@/components/shared/AppHeader'
-import { Sidebar } from './Sidebar'
 
 export default async function DashboardPage() {
   const supabase = createServerComponentClient({ cookies })
@@ -36,7 +35,6 @@ export default async function DashboardPage() {
     <>
       <AppHeader />
       <div className="flex">
-        <Sidebar />
         <main className="flex-1 ml-[70px]">
           <DashboardClient user={session.user} profile={profile} projects={projects || []} />
         </main>

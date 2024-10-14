@@ -3,7 +3,8 @@ import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-interface GoogleUser {
+// Add this line at the top of the file
+export interface GoogleUser {
   name: string;
   email: string;
   picture: string;
@@ -48,28 +49,30 @@ export default function GoogleAccountInfo({ user, onChooseAnotherAccount }: Goog
   };
 
   return (
-    <div className="flex flex-col items-start">
-      <div className="flex items-center mb-4">
-        <Image
-          src={user.picture}
-          alt={user.name}
-          width={40}
-          height={40}
-          className="rounded-full mr-4"
-        />
-        <div>
-          <p className="font-semibold">{user.name}</p>
-          <p className="text-sm text-gray-600">{user.email}</p>
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Image
+            src={user.picture}
+            alt={user.name}
+            width={40}
+            height={40}
+            className="rounded-full"
+          />
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-white">{user.name}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+          </div>
         </div>
+        <Button
+          variant="ghost"
+          className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          onClick={handleClick}
+          disabled={isProcessing}
+        >
+          {isProcessing ? 'Processing...' : 'Choose another account'}
+        </Button>
       </div>
-      <Button
-        variant="ghost"
-        className="text-blue-500 hover:text-blue-700 p-0"
-        onClick={handleClick}
-        disabled={isProcessing}
-      >
-        {isProcessing ? 'Processing...' : 'Choose another account'}
-      </Button>
       {error && <p className="text-red-500 mt-2">{error}</p>}
     </div>
   );

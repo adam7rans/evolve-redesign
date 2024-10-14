@@ -4,10 +4,24 @@ import { useState } from 'react';
 import PlanSelection from './checkout/PlanSelection';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
+import { setCookie } from 'cookies-next';
+
+interface PlanPrice {
+  id: string;
+  interval: 'month' | 'year';
+  unit_amount: number;
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  prices: PlanPrice[];
+  features: string[];
+}
 
 interface HomePageClientProps {
-  plans: any[]; // You might want to define a more specific type here
-  initialSelectedPlan: { priceId: string, interval: 'month' | 'year' } | null;
+  plans: Plan[];
+  initialSelectedPlan: { priceId: string; interval: 'month' | 'year' } | null;
 }
 
 export default function HomePageClient({ plans, initialSelectedPlan }: HomePageClientProps) {
@@ -17,9 +31,30 @@ export default function HomePageClient({ plans, initialSelectedPlan }: HomePageC
 
   const handleSelectPlan = (priceId: string, interval: 'month' | 'year') => {
     setSelectedPlan({ priceId, interval });
-    // Set the cookie
-    document.cookie = `selectedPlan=${JSON.stringify({ priceId, interval })}; path=/; max-age=604800`; // expires in 7 days
-    router.push('/checkout/signup');
+    const selectedPlan = plans.find(plan => plan.prices.some(price => price.id === priceId));
+    if (selectedPlan) {
+      const price = selectedPlan.prices.find(p => p.id === priceId);
+      if (price) {
+        const planData = {
+          priceId,
+          interval,
+          name: selectedPlan.name,
+          price: price.unit_amount / 100
+        };
+        setCookie('selectedPlan', JSON.stringify(planData), { path: '/', maxAge: 604800 }); // expires in 7 days
+        
+        // Trigger a storage event to notify other components
+        window.dispatchEvent(new Event('storage'));
+        
+        router.push('/checkout?step=signup');
+      } else {
+        console.error('Selected price not found');
+        // Handle the case where the price is not found
+      }
+    } else {
+      console.error('Selected plan not found');
+      // Handle the case where the plan is not found
+    }
   };
 
   const handleEarlyAccessSignUp = async (e: React.FormEvent) => {

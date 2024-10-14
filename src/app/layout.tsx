@@ -25,7 +25,19 @@ const geistMono = localFont({
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const supabase = createServerComponentClient({ cookies });
-  const { data: { session } } = await supabase.auth.getSession();
+  
+  // Use getUser() instead of getSession()
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  let hasPaid = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('has_paid')
+      .eq('user_id', user.id)
+      .single();
+    hasPaid = profile?.has_paid || false;
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -33,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <div className="flex flex-col min-h-screen">
-              {session ? <AppHeader /> : <PrelaunchHeader />}
+              {user && hasPaid ? <AppHeader /> : <PrelaunchHeader />}
               <main className="flex-grow">
                 {children}
               </main>

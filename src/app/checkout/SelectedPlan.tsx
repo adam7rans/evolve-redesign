@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { useRouter } from 'next/navigation';
-import { getCookie, setCookie, deleteCookie } from 'cookies-next';
+import { getCookie, deleteCookie } from 'cookies-next';
 
 interface SelectedPlanData {
   priceId: string;
@@ -21,15 +21,26 @@ export default function SelectedPlan({ onChangePlan }: SelectedPlanProps) {
   const [planData, setPlanData] = useState<SelectedPlanData | null>(null);
 
   useEffect(() => {
-    const cookiePlan = getCookie('selectedPlan');
-    if (cookiePlan) {
-      try {
-        const parsedPlan = JSON.parse(cookiePlan as string);
-        setPlanData(parsedPlan);
-      } catch (error) {
-        console.error('Error parsing selectedPlan cookie:', error);
+    const fetchPlanData = () => {
+      const cookiePlan = getCookie('selectedPlan');
+      if (cookiePlan) {
+        try {
+          const parsedPlan = JSON.parse(cookiePlan as string);
+          setPlanData(parsedPlan);
+        } catch (error) {
+          console.error('Error parsing selectedPlan cookie:', error);
+        }
       }
-    }
+    };
+
+    fetchPlanData();
+
+    // Add an event listener for storage changes
+    window.addEventListener('storage', fetchPlanData);
+
+    return () => {
+      window.removeEventListener('storage', fetchPlanData);
+    };
   }, []);
 
   const handleChangePlan = () => {

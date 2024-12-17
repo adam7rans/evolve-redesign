@@ -6,10 +6,15 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/globals.css",
   ],
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Source Code Pro', 'monospace'],
+        mono: ['Source Code Pro', 'monospace'],
+      },
       colors: {
         background: {
           light: '#ffffff',
@@ -26,6 +31,10 @@ const config: Config = {
         secondary: {
           light: '#e5e7eb',
           dark: '#4b5563',
+        },
+        placeholder: {
+          light: '#00000015',  // black with 8% opacity
+          dark: '#ffffff15',   // white with 8% opacity
         },
         // New color palette
         palette: {
@@ -47,7 +56,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;

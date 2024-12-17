@@ -52,7 +52,6 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
       setUser(user);
       if (user) {
         updateStepCompletion('Sign Up', true);
-        // Use user metadata directly
         const googleUserInfo: GoogleUser = {
           name: user.user_metadata.full_name || '',
           email: user.email || '',
@@ -63,15 +62,17 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
       }
     };
 
-    checkUser();
-  }, [supabase]);
+    if (currentStep === 'payment') {
+      checkUser();
+    }
+  }, [currentStep, supabase]);
 
   useEffect(() => {
     const currentStepIndex = steps.findIndex(step => step.href.includes(currentStep));
     if (currentStepIndex !== -1) {
       updateStepCompletion(steps[currentStepIndex].name, true);
     }
-  }, [currentStep]); // Remove steps from the dependency array
+  }, [currentStep]);
 
   useEffect(() => {
     const selectedPlanCookie = getCookie('selectedPlan') as string | undefined;
@@ -170,13 +171,13 @@ export default function CheckoutClient({ currentStep }: CheckoutClientProps) {
                 />
               </div>
             ) : (
-              <div>No Google user data available</div>
+              <div>Loading user information...</div>
             )}
             <div className="w-full md:w-2/3 mx-auto">
               {currentStep === 'signup' ? (
                 <SignUpForm onSignUp={handleSignUp} selectedPlan={selectedPlanDetails} />
               ) : (
-                <PaymentMethod
+                user && <PaymentMethod
                   user={user}
                   selectedPlan={selectedPlanDetails}
                 />

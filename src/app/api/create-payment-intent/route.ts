@@ -6,15 +6,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: Request) {
-  const { userId } = await req.json();
-
   try {
+    const { amount, userId } = await req.json();
+    console.log('Received payment intent request:', { amount, userId });
+
+    if (!amount || !userId || typeof amount !== 'number' || amount <= 0) {
+      console.error('Invalid parameters:', { amount, userId });
+      return NextResponse.json({ error: 'Invalid or missing parameters' }, { status: 400 });
+    }
+
+    console.log('Creating payment intent');
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: 1000, // Amount in cents
+      amount: Math.round(amount),
       currency: 'usd',
+      payment_method_types: ['card', 'paypal'],
       metadata: { userId },
     });
 
+    console.log('Payment intent created:', paymentIntent.id);
     return NextResponse.json({ clientSecret: paymentIntent.client_secret });
   } catch (error) {
     console.error('Error creating payment intent:', error);

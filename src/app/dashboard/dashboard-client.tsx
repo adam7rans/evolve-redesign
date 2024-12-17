@@ -4,19 +4,28 @@ import { User } from '@supabase/auth-helpers-nextjs';
 import { SubHeader } from './subheader';
 import ProjectsTable from './projects-table';
 import CreateProjectForm from './project-creation-form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Toaster, toast } from 'react-hot-toast';
 
 interface DashboardClientProps {
   user: User;
   profile: any; // Replace 'any' with your profile type
   projects: any[]; // Replace 'any[]' with your project type
+  paymentSuccess: boolean;
 }
 
-export default function DashboardClient({ user, profile, projects }: DashboardClientProps) {
+export default function DashboardClient({ user, profile, projects, paymentSuccess }: DashboardClientProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  useEffect(() => {
+    if (paymentSuccess) {
+      toast.success('Payment successful! Welcome to your premium dashboard.')
+    }
+  }, [paymentSuccess]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
+      <Toaster position="top-right" />
       <SubHeader
         title="Projects"
         buttonLabel={showCreateForm ? "View Projects" : "Create New Project"}

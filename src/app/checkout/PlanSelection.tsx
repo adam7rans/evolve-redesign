@@ -107,8 +107,8 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
   };
 
   // Debugging logs
-  console.log('PlanSelection plans:', plans);
-  console.log('PlanSelection selectedPlan:', selectedPlanState);
+  // console.log('PlanSelection plans:', plans);
+  // console.log('PlanSelection selectedPlan:', selectedPlanState);
 
   const getButtonLabel = (isSelected: boolean) => {
     if (!cookiePlanExists) return "Subscribe";
@@ -140,10 +140,8 @@ export default function PlanSelection({ plans, selectedPlan: initialSelectedPlan
           <p>No plans available</p>
         ) : (
           plans.map((plan) => {
-            console.log('Rendering plan:', plan);
             const price = plan.prices.find(p => p.interval === (isYearly ? 'year' : 'month'));
             if (!price) {
-              console.log('No price found for interval:', (isYearly ? 'year' : 'month'));
               return null;
             }
             const isSelected = selectedPlanState === price.id || selectedPlanFromCookie === price.id;

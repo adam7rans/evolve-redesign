@@ -1,16 +1,20 @@
 import React from 'react';
-import { Inter } from 'next/font/google';
+import { Source_Code_Pro } from 'next/font/google';
 import localFont from "next/font/local";
 import "./globals.css";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { NoiseProvider } from '@/contexts/NoiseContext';
 import { AppHeader } from '@/components/shared/AppHeader';
-import { PrelaunchHeader } from '@/components/shared/PrelaunchHeader';
+import { FloatingNav } from '@/components/ui/floating-nav';
+import { NoisePattern } from '@/components/ui/noise-pattern';
 import Footer from '@/components/shared/Footer';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 
-const inter = Inter({ subsets: ['latin'] });
+const sourceCodePro = Source_Code_Pro({ 
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+});
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -23,36 +27,36 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      {children}
+    </ThemeProvider>
+  );
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createServerComponentClient({ cookies });
-  
-  // Use getUser() instead of getSession()
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  let hasPaid = false;
-  if (user) {
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('has_paid')
-      .eq('user_id', user.id)
-      .single();
-    hasPaid = profile?.has_paid || false;
-  }
-
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} ${geistSans.variable} ${geistMono.variable} flex flex-col min-h-screen`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            <div className="flex flex-col min-h-screen">
-              {user && hasPaid ? <AppHeader /> : <PrelaunchHeader />}
+      <body className={`${sourceCodePro.className} font-sans flex flex-col min-h-screen`}>
+        <Providers>
+          <NoiseProvider>
+            <AuthProvider>
+              <AppHeader />
               <main className="flex-grow">
                 {children}
               </main>
               <Footer />
-            </div>
-          </AuthProvider>
-        </ThemeProvider>
+              <FloatingNav />
+              <NoisePattern />
+            </AuthProvider>
+          </NoiseProvider>
+        </Providers>
       </body>
     </html>
   );

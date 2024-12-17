@@ -1,59 +1,77 @@
 import Stripe from 'stripe';
-import { loadStripe, Stripe as StripeJS } from '@stripe/stripe-js';
 
-// Server-side initialization
-let serverStripe: Stripe | null = null;
-if (typeof window === 'undefined') {
-  // Check if running on the server
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is not set in the environment variables');
-  }
-  // Initialize server-side Stripe instance
-  serverStripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-06-20',
-  });
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY is not set');
 }
 
-// Client-side initialization
-let clientStripe: Promise<StripeJS | null>;
-if (typeof window !== 'undefined') {
-  // Check if running in the browser
-  if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-    throw new Error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set in the environment variables');
-  }
-  // Initialize client-side Stripe instance
-  clientStripe = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16',
+});
 
-/**
- * Fetches products with their associated prices from Stripe
- * @returns An array of products with their prices
- * @throws Error if server-side Stripe is not initialized or if called on client-side
- */
 export async function getProductsWithPrices() {
-  if (!serverStripe) {
-    throw new Error('Stripe instance is not initialized');
-  }
-
-  console.log("Fetching products from Stripe...");
-  const products = await serverStripe.products.list({
-    expand: ['data.default_price'],
+  const products = await stripe.products.list({
     active: true,
+    expand: ['data.default_price'],
   });
 
-  const productsWithPrices = await Promise.all(products.data.map(async (product) => {
-    const prices = await serverStripe!.prices.list({
-      product: product.id,
-      active: true,
-    });
-    return {
-      ...product,
-      prices: prices.data,
-    };
-  }));
+  const productsWithPrices = await Promise.all(
+    products.data.map(async (product) => {
+      const prices = await stripe.prices.list({
+        product: product.id,
+        active: true,
+      });
 
-  console.log("Products fetched:", productsWithPrices);
+      return {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        metadata: product.metadata,
+        prices: prices.data.map((price) => ({
+          id: price.id,
+          recurring: price.recurring,
+          unit_amount: price.unit_amount,
+        })),
+      };
+    })
+  );
+
   return productsWithPrices;
 }
 
-export { serverStripe, clientStripe };
+export async function createCheckoutSession({
+  priceId,
+  successUrl,
+  cancelUrl,
+  customerId,
+}: {
+  priceId: string;
+  successUrl: string;
+  cancelUrl: string;
+  customerId?: string;
+}) {
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price: priceId,
+        quantity: 1,
+      },
+    ],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    customer: customerId,
+  });
+
+  return session;
+}
+
+export async function getSubscription(subscriptionId: string) {
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  return subscription;
+}
+
+export async function cancelSubscription(subscriptionId: string) {
+  const subscription = await stripe.subscriptions.cancel(subscriptionId);
+  return subscription;
+}

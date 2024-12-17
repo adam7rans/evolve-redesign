@@ -17,6 +17,23 @@ interface PaymentMethodProps {
   } | null;
 }
 
+async function updateUserPaymentStatus(userId: string) {
+  console.log('Updating user payment status for:', userId);
+  const response = await fetch('/api/update-payment-status', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userId }),
+  });
+
+  if (!response.ok) {
+    console.error('Failed to update payment status:', response.status, response.statusText);
+    throw new Error('Failed to update payment status');
+  }
+  console.log('User payment status updated successfully');
+}
+
 function PaymentMethodContent({ user, selectedPlan }: PaymentMethodProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -25,27 +42,70 @@ function PaymentMethodContent({ user, selectedPlan }: PaymentMethodProps) {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    console.log('Payment submission started');
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || !user || !selectedPlan) {
+      console.log('Missing required data:', { stripe, elements, user, selectedPlan });
       return;
     }
 
     setProcessing(true);
 
-    const { error: stripeError } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/dashboard`,
-      },
-      redirect: 'if_required',
-    });
+    try {
+      console.log('Submitting payment details');
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        console.error('Submit error:', submitError);
+        throw submitError;
+      }
 
-    if (stripeError) {
-      setError(stripeError.message || 'An unexpected error occurred.');
+      console.log('Creating payment intent');
+      const response = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          amount: selectedPlan.price * 100,
+        }),
+      });
+
+      const { clientSecret } = await response.json();
+      console.log('Client secret received:', !!clientSecret);
+
+      if (!clientSecret) {
+        throw new Error('Failed to create PaymentIntent');
+      }
+
+      console.log('Confirming payment');
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/dashboard?payment_success=true`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (confirmError) {
+        console.error('Confirm error:', confirmError);
+        throw confirmError;
+      }
+
+      console.log('Payment intent status:', paymentIntent.status);
+      if (paymentIntent.status === 'succeeded') {
+        console.log('Updating user payment status');
+        await updateUserPaymentStatus(user.id);
+        window.location.href = '/dashboard?payment_success=true';
+      } else {
+        throw new Error('Payment not successful');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred.');
+    } finally {
       setProcessing(false);
-    } else {
-      // Payment succeeded, redirect to dashboard
-      window.location.href = `${window.location.origin}/dashboard`;
     }
   };
 
@@ -62,6 +122,7 @@ function PaymentMethodContent({ user, selectedPlan }: PaymentMethodProps) {
 
 export default function PaymentMethod({ user, selectedPlan }: PaymentMethodProps) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [stripeElement, setStripeElement] = useState<JSX.Element | null>(null);
 
   useEffect(() => {
     const fetchClientSecret = async () => {
@@ -74,9 +135,12 @@ export default function PaymentMethod({ user, selectedPlan }: PaymentMethodProps
             },
             body: JSON.stringify({
               userId: user.id,
-              priceId: selectedPlan.priceId,
+              amount: selectedPlan.price * 100, // Convert to cents
             }),
           });
+          if (!response.ok) {
+            throw new Error('Failed to fetch client secret');
+          }
           const data = await response.json();
           setClientSecret(data.clientSecret);
         } catch (error) {
@@ -88,6 +152,16 @@ export default function PaymentMethod({ user, selectedPlan }: PaymentMethodProps
     fetchClientSecret();
   }, [user, selectedPlan]);
 
+  useEffect(() => {
+    if (clientSecret) {
+      setStripeElement(
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <PaymentMethodContent user={user} selectedPlan={selectedPlan} />
+        </Elements>
+      );
+    }
+  }, [clientSecret, user, selectedPlan]);
+
   if (!user) {
     return <div>Please sign in to continue with payment.</div>;
   }
@@ -96,9 +170,5 @@ export default function PaymentMethod({ user, selectedPlan }: PaymentMethodProps
     return <div>Loading payment method...</div>;
   }
 
-  return (
-    <Elements stripe={stripePromise} options={{ clientSecret }}>
-      <PaymentMethodContent user={user} selectedPlan={selectedPlan} />
-    </Elements>
-  );
+  return stripeElement ? stripeElement : <div>Loading payment method...</div>;
 }

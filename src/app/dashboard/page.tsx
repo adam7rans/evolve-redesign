@@ -4,7 +4,11 @@ import { redirect } from 'next/navigation'
 import DashboardClient from './dashboard-client'
 import { AppHeader } from '@/components/shared/AppHeader'
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const supabase = createServerComponentClient({ cookies })
   
   const {
@@ -24,6 +28,19 @@ export default async function DashboardPage() {
     .eq('user_id', session.user.id)
     .single()
 
+  if (searchParams.payment_success === 'true' && !profile.has_paid) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ has_paid: true })
+      .eq('user_id', session.user.id)
+
+    if (error) {
+      console.error('Error updating payment status:', error)
+    } else {
+      profile.has_paid = true
+    }
+  }
+
   const { data: projects } = await supabase
     .from('projects')
     .select('*')
@@ -36,7 +53,12 @@ export default async function DashboardPage() {
       <AppHeader />
       <div className="flex">
         <main className="flex-1 ml-[70px]">
-          <DashboardClient user={session.user} profile={profile} projects={projects || []} />
+          <DashboardClient 
+            user={session.user} 
+            profile={profile} 
+            projects={projects || []} 
+            paymentSuccess={searchParams.payment_success === 'true'}
+          />
         </main>
       </div>
     </>

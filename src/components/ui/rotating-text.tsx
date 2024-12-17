@@ -20,7 +20,7 @@ export function RotatingText({ words, interval = 2000, className = '' }: Rotatin
   }, [interval, words.length])
 
   return (
-    <span className={`inline-block transition-opacity duration-500 ${className}`}>
+    <span className={`inline-block transition-opacity duration-500 leading-normal py-1 ${className}`}>
       {words[currentIndex]}
     </span>
   )

@@ -19,7 +19,7 @@ export default function HomePage() {
           <span>for Scalable</span>
           <RotatingText 
             words={rotatingWords} 
-            className="text-primary"
+            className="bg-gradient-to-r from-blue-900 via-indigo-400 to-purple-400 bg-clip-text text-transparent"
           />
         </h1>
         <p className="text-2xl text-muted-foreground max-w-3xl mx-auto">

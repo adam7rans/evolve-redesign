@@ -26,14 +26,12 @@
       {
         "name": "next"
       }
-    ],
-    "types": ["stripe-v3"]
+    ]
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "**/*.mjs",
     ".next/types/**/*.ts",
     "src/**/*"
   ],

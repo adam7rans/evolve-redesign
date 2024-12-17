@@ -1,9 +1,7 @@
 import React from 'react';
-import { Source_Code_Pro } from 'next/font/google';
-import localFont from "next/font/local";
+import { Source_Code_Pro, Roboto_Mono } from 'next/font/google';
 import "./globals.css";
-import { ThemeProvider } from "next-themes";
-import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NoiseProvider } from '@/contexts/NoiseContext';
 import { AppHeader } from '@/components/shared/AppHeader';
 import { FloatingNav } from '@/components/ui/floating-nav';
@@ -16,47 +14,27 @@ const sourceCodePro = Source_Code_Pro({
   weight: ['400', '500', '600', '700'],
 });
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-mono',
 });
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
-
-function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      {children}
-    </ThemeProvider>
-  );
-}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${sourceCodePro.className} font-sans flex flex-col min-h-screen`}>
-        <Providers>
+      <body className={`${sourceCodePro.className} ${robotoMono.variable} font-sans flex flex-col min-h-screen`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <NoiseProvider>
-            <AuthProvider>
-              <AppHeader />
-              <main className="flex-grow">
-                {children}
-              </main>
-              <Footer />
-              <FloatingNav />
-              <NoisePattern />
-            </AuthProvider>
+            <AppHeader />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+            <FloatingNav />
+            <NoisePattern />
           </NoiseProvider>
-        </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,31 +1,22 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { Button } from "@/components/ui/button"
-import Image from 'next/image'
 import { ThemeToggle } from './ThemeToggle'
 import { NoiseToggle } from '@/components/ui/noise-toggle'
+import { Logo } from './Logo'
 
 export function AppHeader() {
   return (
     <header className="w-full bg-transparent">
       <div className="container mx-auto px-4">
-        <div className="flex h-20 items-center justify-between">
+        <div className="flex h-20 items-center justify-between overflow-visible">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 text-foreground">
-            <Image
-              src="/Evolve Network Logo.svg"
-              alt="Evolve Network Logo"
-              width={60}
-              height={60}
-              className="h-15 w-15"
-              style={{ color: 'inherit' }}
-            />
-            <span className="font-bold text-lg">Evolve Network</span>
-          </Link>
+          <Logo />
 
           {/* Navigation */}
-          <nav className="flex items-center space-x-8">
+          <nav className="flex items-center space-x-8 overflow-visible">
             <Link href="/agents" className="text-sm font-medium transition-colors hover:text-primary">
               Agents
             </Link>
@@ -47,7 +38,7 @@ export function AppHeader() {
           </nav>
 
           {/* Right side buttons */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 overflow-visible">
             <NoiseToggle />
             <ThemeToggle />
             <Button className="bg-blue-600 text-white hover:bg-blue-700 transition-colors">

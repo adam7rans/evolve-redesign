@@ -1,0 +1,51 @@
+.slider-track {
+  position: relative;
+  width: 100%;
+  flex-grow: 1;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+
+.slider-range {
+  position: absolute;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 9999px;
+}
+
+.slider-thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.slider-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+.slider-thumb:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.slider-thumb:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Increase the hit area for better touch interaction */
+.slider-thumb::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}

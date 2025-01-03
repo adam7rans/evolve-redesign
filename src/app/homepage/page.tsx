@@ -1,31 +1,60 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Icons } from "@/components/ui/icons"
 import Link from 'next/link'
 import { RotatingText } from "@/components/ui/rotating-text"
+import { Scene } from "@/components/3d/Scene"
+import { SceneControls, SceneParams } from "@/components/3d/SceneControls"
 
 const rotatingWords = ["AI agents", "compute", "community intelligence", "token value"]
 
 export default function HomePage() {
+  const [sceneParams, setSceneParams] = useState<SceneParams>({
+    iorR: 1.14,
+    iorG: 1.16,
+    iorB: 1.18,
+    fresnelPower: 2.0,
+    opacity: 1.0,
+    roughness: 0.0,
+    metalness: 0.0,
+    reflectivity: 0.5,
+    chromaticAberration: 0.02,
+    refractionRatio: 0.15,
+    pointLightIntensity: 2.0,
+    pointLightDistance: 50,
+    pointLightDecay: 2.0,
+    ambientLightIntensity: 0.2,
+  });
+
   return (
-    <div className="container mx-auto px-4 py-12 space-y-48">
+    <main className="relative">
+      <div className="container mx-auto px-4 space-y-48">
       
       {/* Hero Section */}
-      <section id="overview" className="text-center my-24 space-y-6">
-        <h1 className="text-7xl font-bold flex flex-col gap-2">
-          <span>Decentralized Network</span>
-          <span>for Scalable</span>
-          <RotatingText 
-            words={rotatingWords} 
-            className="bg-gradient-to-r from-blue-900 via-indigo-400 to-purple-400 bg-clip-text text-transparent"
-          />
-        </h1>
-        <p className="text-2xl text-muted-foreground max-w-3xl mx-auto">
-        A decentralized platform that empowers developers to create, deploy, and monetize AI agents while enabling seamless collaboration and data sharing across the network.        </p>
-        <div className="flex gap-4 justify-center">
-          <Button size="lg" variant="outline">Get Started</Button>
+      <section id="overview" className="relative min-h-screen">
+        <div className="absolute inset-0 w-full h-[150vh] pointer-events-none -z-10">
+          <Scene sceneParams={sceneParams} />
+        </div>
+        <SceneControls onUpdate={setSceneParams} initialParams={sceneParams} />
+
+        <div className="relative pt-[45vh] space-y-6 text-center">
+          <h1 className="text-7xl font-bold flex flex-col gap-2">
+            <span>Decentralized Network</span>
+            <span>for Scalable</span>
+            <RotatingText 
+              words={rotatingWords} 
+              className="bg-gradient-to-r from-blue-900 via-indigo-400 to-purple-400 bg-clip-text text-transparent"
+            />
+          </h1>
+          <p className="text-2xl text-muted-foreground max-w-3xl mx-auto">
+            A decentralized platform that empowers developers to create, deploy, and monetize AI agents while enabling seamless collaboration and data sharing across the network.
+          </p>
+          <div className="flex gap-4 justify-center pb-12">
+            <Button size="lg" variant="outline">Get Started</Button>
+          </div>
         </div>
       </section>
 
@@ -299,5 +328,6 @@ export default function HomePage() {
         </div>
       </section>
     </div>
+  </main>
   )
 }

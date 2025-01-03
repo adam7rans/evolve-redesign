@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { GlassObject } from './GlassObject';
 import * as THREE from 'three';
@@ -23,6 +23,39 @@ interface SceneParams {
 
 interface SceneProps {
   sceneParams: SceneParams;
+}
+
+// Grid component with animation
+function AnimatedGrid() {
+  const gridRef = useRef<THREE.Group>(null);
+  
+  useFrame((state, delta) => {
+    if (gridRef.current) {
+      // Move the grid upward
+      gridRef.current.position.y += delta * 0.5;
+      
+      // Reset position when it moves too far
+      if (gridRef.current.position.y > 60) {
+        gridRef.current.position.y = 0;
+      }
+    }
+  });
+
+  return (
+    <group ref={gridRef} rotation={[-Math.PI / 2, 0, 0]} scale={2.5}>
+      <gridHelper 
+        args={[80, 160, '#ffffff', '#ffffff']}
+        position={[0, 0, -4]}
+      >
+        <meshBasicMaterial 
+          attach="material" 
+          opacity={0.6} 
+          transparent 
+          color="#ffffff" 
+        />
+      </gridHelper>
+    </group>
+  );
 }
 
 export const Scene = ({ sceneParams }: SceneProps) => {
@@ -95,19 +128,7 @@ export const Scene = ({ sceneParams }: SceneProps) => {
         style={{ pointerEvents: 'auto' }}
       >
         {/* Grid */}
-        <group position={[0, 0, -4]} rotation={[-Math.PI / 2, 0, 0]} scale={1.5}>
-          <gridHelper 
-            args={[60, 60, '#ffffff', '#ffffff']}
-            position={[0, 0, 0]}
-          >
-            <meshBasicMaterial 
-              attach="material" 
-              opacity={0.8} 
-              transparent 
-              color="#ffffff" 
-            />
-          </gridHelper>
-        </group>
+        <AnimatedGrid />
 
         {/* Lighting */}
         <ambientLight intensity={ambientLightIntensity} />

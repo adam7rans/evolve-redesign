@@ -94,7 +94,7 @@ const fragmentShader = `
 `;
 
 interface GlassObjectProps {
-  geometry?: 'sphere' | 'torus' | 'cone' | 'cylinder';
+  geometry: 'sphere' | 'torus' | 'cone' | 'cylinder' | THREE.BufferGeometry;
   position?: [number, number, number];
   scale?: number;
   iorR?: number;
@@ -109,7 +109,7 @@ interface GlassObjectProps {
   refractionRatio?: number;
 }
 
-export const GlassObject = ({ 
+export function GlassObject({
   geometry = 'sphere',
   position = [0, 0, 0],
   scale = 1,
@@ -123,23 +123,15 @@ export const GlassObject = ({
   reflectivity = 0.0,
   chromaticAberration = 0.0,
   refractionRatio = 0.0
-}: GlassObjectProps) => {
-  const mesh = useRef<Mesh>(null);
-  const mainRenderTarget = useFBO();
-  const targetScale = useRef(scale);
+}: GlassObjectProps) {
+  const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const renderTarget = useFBO();
 
   const uniforms = useMemo(
     () => ({
-      uTexture: {
-        value: null,
-      },
-      winResolution: {
-        value: new THREE.Vector2(
-          window.innerWidth,
-          window.innerHeight
-        ).multiplyScalar(Math.min(window.devicePixelRatio, 2)),
-      },
+      uTexture: { value: null },
+      winResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
       iorR: { value: iorR },
       iorG: { value: iorG },
       iorB: { value: iorB },
@@ -151,67 +143,48 @@ export const GlassObject = ({
       chromaticAberration: { value: chromaticAberration },
       refractionRatio: { value: refractionRatio }
     }),
-    []  // Empty dependency array since we'll update manually
+    [iorR, iorG, iorB, fresnelPower, opacity, roughness, metalness, reflectivity, chromaticAberration, refractionRatio]
   );
 
-  // Update uniforms when props change
-  useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.iorR.value = iorR;
-      materialRef.current.uniforms.iorG.value = iorG;
-      materialRef.current.uniforms.iorB.value = iorB;
-      materialRef.current.uniforms.fresnelPower.value = fresnelPower;
-      materialRef.current.uniforms.opacity.value = opacity;
-      materialRef.current.uniforms.roughness.value = roughness;
-      materialRef.current.uniforms.metalness.value = metalness;
-      materialRef.current.uniforms.reflectivity.value = reflectivity;
-      materialRef.current.uniforms.chromaticAberration.value = chromaticAberration;
-      materialRef.current.uniforms.refractionRatio.value = refractionRatio;
+  useFrame((state) => {
+    if (materialRef.current && meshRef.current) {
+      state.gl.setRenderTarget(renderTarget);
+      state.gl.render(state.scene, state.camera);
+      state.gl.setRenderTarget(null);
+      
+      materialRef.current.uniforms.uTexture.value = renderTarget.texture;
+      
+      meshRef.current.rotation.x += 0.005;
+      meshRef.current.rotation.y += 0.005;
     }
-  }, [iorR, iorG, iorB, fresnelPower, opacity, roughness, metalness, reflectivity, chromaticAberration, refractionRatio]);
-
-  useFrame((state, delta) => {
-    if (!mesh.current) return;
-    
-    const { gl, scene, camera } = state;
-    mesh.current.visible = false;
-    
-    gl.setRenderTarget(mainRenderTarget);
-    gl.render(scene, camera);
-    
-    if (mesh.current.material) {
-      (mesh.current.material as THREE.ShaderMaterial).uniforms.uTexture.value = mainRenderTarget.texture;
-    }
-    
-    gl.setRenderTarget(null);
-    mesh.current.visible = true;
-
-    targetScale.current = scale;
-    mesh.current.scale.lerp(new THREE.Vector3(scale, scale, scale), delta * 2);
   });
 
-  const getGeometry = () => {
+  const finalGeometry = useMemo(() => {
+    if (geometry instanceof THREE.BufferGeometry) {
+      return geometry;
+    }
+
     switch (geometry) {
       case 'sphere':
-        return <sphereGeometry args={[1, 64, 64]} />;
+        return new THREE.SphereGeometry(1, 32, 32);
       case 'torus':
-        return <torusGeometry args={[1, 0.4, 32, 100]} />;
+        return new THREE.TorusGeometry(1, 0.4, 16, 100);
       case 'cone':
-        return <coneGeometry args={[1, 2, 32]} />;
+        return new THREE.ConeGeometry(1, 2, 32);
       case 'cylinder':
-        return <cylinderGeometry args={[1, 1, 2, 32]} />;
+        return new THREE.CylinderGeometry(1, 1, 2, 32);
       default:
-        return <sphereGeometry args={[1, 64, 64]} />;
+        return new THREE.SphereGeometry(1, 32, 32);
     }
-  };
+  }, [geometry]);
 
   return (
     <mesh
-      ref={mesh as React.RefObject<Mesh>}
+      ref={meshRef}
       position={position}
       scale={scale}
+      geometry={finalGeometry}
     >
-      {getGeometry()}
       <shaderMaterial
         ref={materialRef}
         vertexShader={vertexShader}

@@ -49,3 +49,21 @@
   height: 32px;
   border-radius: 50%;
 }
+
+.grid-container {
+    overflow: hidden; /* Prevents overflow */
+    position: relative; /* Allows absolute positioning of child elements */
+}
+
+@keyframes diagonal-scroll {
+    0% {
+        transform: translate(0, 0);
+    }
+    100% {
+        transform: translate(100%, -100%); /* Scrolls to the right and up */
+    }
+}
+
+.grid-item {
+    animation: diagonal-scroll 10s linear infinite; /* Adjust duration as needed */
+}

@@ -25,9 +25,9 @@ export default function ExperimentsPage() {
           </a>
         </div>
         <div className="bg-zinc-900 p-6 rounded-lg">
-          <h2 className="text-2xl font-semibold text-white mb-4">Glass Gradient</h2>
-          <p className="text-zinc-300 mb-4">Glass torus with animated gradient background</p>
-          <a href="/experiments/glass-gradient" className="text-blue-400 hover:text-blue-300">
+          <h2 className="text-2xl font-semibold text-white mb-4">Glass on Gradient</h2>
+          <p className="text-zinc-300 mb-4">Glass morphism effects combined with interactive gradient backgrounds</p>
+          <a href="/experiments/glass-on-gradient" className="text-blue-400 hover:text-blue-300">
             View experiment →
           </a>
         </div>

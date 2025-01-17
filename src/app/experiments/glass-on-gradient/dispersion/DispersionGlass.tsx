@@ -77,8 +77,7 @@ const Geometries = ({ controlsFolder }: GeometriesProps) => {
         iorB: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
         iorP: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
       }),
-      
-      saturation: { value: 1.00, min: 1, max: 1.25, step: 0.01 },
+      saturation: { value: 1.0, min: 1, max: 1.25, step: 0.01 },
       chromaticAberration: {
         value: 0.6,
         min: 0,

@@ -1,0 +1,11 @@
+{
+    "glsl-linter.validatorArgs": [
+        "--stdin",
+        "-S frag"
+    ],
+    "glsl-linter.fileExtensions": {
+        ".glsl": "frag",
+        ".frag": "frag",
+        ".vert": "vert"
+    }
+}

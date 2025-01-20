@@ -53,7 +53,7 @@ export default function ScrollingBackgroundGradient({
       },
       timeMultiplier: { value: 0.1, min: 0, max: 2, step: 0.1 },
       scale: { value: 3.7, min: 0.1, max: 5, step: 0.1 },
-      iterations: { value: 3.0, min: 1, max: 5, step: 0.1 },
+      iterations: { value: 1.0, min: 1, max: 5, step: 0.1 },
       intensity: { value: 0.15, min: 0, max: 1, step: 0.01 },
     }
   )

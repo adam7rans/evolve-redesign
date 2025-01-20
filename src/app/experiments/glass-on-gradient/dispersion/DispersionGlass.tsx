@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { Mesh, ShaderMaterial, Group } from 'three';
 import fragmentShader from "./shaders/fragment.glsl";
 import vertexShader from "./shaders/vertex.glsl";
+import ScrollingBackgroundGradient from '@/components/examples/scrollingBackgroundGradient/ScrollingBackgroundGradient';
 
 interface SceneProps {
   controlsFolder?: string;
@@ -17,13 +18,16 @@ const Scene = ({ controlsFolder }: SceneProps) => {
       <Canvas 
         camera={{ position: [0, 0, 10] }}
         gl={{ 
-          alpha: true,
           antialias: true,
           powerPreference: 'high-performance'
         }}
       >
         <Geometries controlsFolder={controlsFolder} />
-        <OrbitControls />
+        <OrbitControls 
+          enablePan={false}
+          enableZoom={false}
+          enableRotate={false}
+        />
       </Canvas>
       <Leva />
     </div>
@@ -169,6 +173,9 @@ const Geometries = ({ controlsFolder }: GeometriesProps) => {
 
   return (
     <>
+      <group position={[0, 0, -10]} scale={[2, 2, 1]}>
+        <ScrollingBackgroundGradient screens={1} loopScroll={false} controlsFolder={`${controlsFolder || 'Glass'}/Background`} />
+      </group>
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
       <group ref={backgroundGroup}>

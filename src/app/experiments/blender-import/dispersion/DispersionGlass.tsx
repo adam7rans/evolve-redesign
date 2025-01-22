@@ -12,6 +12,7 @@ import vertexShader from "./shaders/vertex.glsl";
 const Scene = () => {
   const meshRef = useRef<Mesh<THREE.BufferGeometry, ShaderMaterial>>(null);
   const backgroundGroup = useRef<Group>(null);
+  const gridRef = useRef<THREE.GridHelper | null>(null);
   const mainRenderTarget = useFBO();
   const secondaryRenderTarget = useFBO();
   const { scene, camera, gl } = useThree();
@@ -65,6 +66,23 @@ const Scene = () => {
       max: 1,
       step: 0.01,
     },
+  });
+
+  const { gridSpeed, gridThickness } = useControls('Grid', {
+    gridSpeed: {
+      value: 0.03,
+      min: 0,
+      max: 0.1,
+      step: 0.001,
+      label: 'Scroll Speed'
+    },
+    gridThickness: {
+      value: 1,
+      min: 0.5,
+      max: 3,
+      step: 0.1,
+      label: 'Line Thickness'
+    }
   });
 
   const uniforms = useMemo(() => ({
@@ -127,8 +145,10 @@ const Scene = () => {
           new THREE.IcosahedronGeometry(0.5, 8),
           new THREE.MeshStandardMaterial({ 
             color: 'white',
-            roughness: 0.1,
-            metalness: 0.1
+            roughness: 0.0,
+            metalness: 0.0,
+            emissive: 'white',
+            emissiveIntensity: 1
           })
         );
         mesh.position.set(col, row, -4);
@@ -147,6 +167,17 @@ const Scene = () => {
 
     // Set scene background
     scene.background = new THREE.Color(0x000000);
+
+    // Add black plane
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(15, 15),
+      new THREE.MeshStandardMaterial({
+        color: 'black',
+        side: THREE.DoubleSide
+      })
+    );
+    plane.position.set(0, 0, -4);
+    scene.add(plane);
 
     // Add torus with glass material
     const torus = new THREE.Mesh(
@@ -184,7 +215,42 @@ const Scene = () => {
     };
   }, [camera, scene, uniforms]);
 
+  useEffect(() => {
+    // Add grid overlay
+    const grid = new THREE.GridHelper(15, 15, 0xffffff, 0xffffff);
+    grid.position.set(0, 0, -3.99); // Slightly in front of the plane
+    grid.rotation.x = Math.PI / 2; // Rotate to match plane orientation
+    
+    // Debug grid material
+    console.log('Grid Material:', grid.material);
+    console.log('Grid Material Type:', grid.material.constructor.name);
+    
+    // Apply line thickness
+    if (grid.material instanceof THREE.LineBasicMaterial) {
+      console.log('Setting line thickness to:', gridThickness);
+      grid.material.linewidth = gridThickness;
+      console.log('Actual line width after setting:', grid.material.linewidth);
+    } else {
+      console.log('Material is not LineBasicMaterial, it is:', typeof grid.material);
+    }
+    
+    gridRef.current = grid;
+    scene.add(grid);
+
+    return () => {
+      if (gridRef.current) {
+        scene.remove(gridRef.current);
+        gridRef.current = null;
+      }
+    };
+  }, [scene, gridThickness]);
+
   useFrame((state) => {
+    // Animate grid scrolling
+    if (gridRef.current) {
+      gridRef.current.position.y = (gridRef.current.position.y + gridSpeed) % 1;
+    }
+
     // First render the scene to the texture
     const glassObjects: THREE.Mesh[] = [];
     scene.traverse((obj) => {

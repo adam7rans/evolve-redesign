@@ -31,6 +31,13 @@ export default function ExperimentsPage() {
             View experiment →
           </a>
         </div>
+        <div className="bg-zinc-900 p-6 rounded-lg">
+          <h2 className="text-2xl font-semibold text-white mb-4">Blender Import</h2>
+          <p className="text-zinc-300 mb-4">3D model visualization with glass dispersion effects</p>
+          <a href="/experiments/blender-import" className="text-blue-400 hover:text-blue-300">
+            View experiment →
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -68,20 +68,13 @@ const Scene = () => {
     },
   });
 
-  const { gridSpeed, gridThickness } = useControls('Grid', {
+  const { gridSpeed } = useControls('Grid', {
     gridSpeed: {
       value: 0.03,
       min: 0,
       max: 0.1,
       step: 0.001,
       label: 'Scroll Speed'
-    },
-    gridThickness: {
-      value: 1,
-      min: 0.5,
-      max: 3,
-      step: 0.1,
-      label: 'Line Thickness'
     }
   });
 
@@ -221,19 +214,6 @@ const Scene = () => {
     grid.position.set(0, 0, -3.99); // Slightly in front of the plane
     grid.rotation.x = Math.PI / 2; // Rotate to match plane orientation
     
-    // Debug grid material
-    console.log('Grid Material:', grid.material);
-    console.log('Grid Material Type:', grid.material.constructor.name);
-    
-    // Apply line thickness
-    if (grid.material instanceof THREE.LineBasicMaterial) {
-      console.log('Setting line thickness to:', gridThickness);
-      grid.material.linewidth = gridThickness;
-      console.log('Actual line width after setting:', grid.material.linewidth);
-    } else {
-      console.log('Material is not LineBasicMaterial, it is:', typeof grid.material);
-    }
-    
     gridRef.current = grid;
     scene.add(grid);
 
@@ -243,7 +223,7 @@ const Scene = () => {
         gridRef.current = null;
       }
     };
-  }, [scene, gridThickness]);
+  }, [scene]);
 
   useFrame((state) => {
     // Animate grid scrolling

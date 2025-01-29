@@ -50,6 +50,16 @@ export default function RSpherePage() {
     });
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     
+    // Add wireframe sphere
+    const wireframeMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.1,
+    });
+    const wireframeSphere = new THREE.Mesh(sphereGeometry, wireframeMaterial);
+    sphere.add(wireframeSphere);
+    
     // Set up rotation container
     const sphereContainer = new THREE.Object3D();
     sphereContainer.add(sphere);
@@ -65,7 +75,7 @@ export default function RSpherePage() {
     const glowEffects: GlowEffect[] = [];
     const glowGeometry = new THREE.SphereGeometry(0.15, 16, 16);
     
-    function createGlowEffect(position: THREE.Vector3) {
+    function createGlowEffect(position: THREE.Vector3, parent: THREE.Object3D = sphere) {
       const glowMaterial = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
@@ -74,7 +84,7 @@ export default function RSpherePage() {
       
       const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
       glowMesh.position.copy(position);
-      scene.add(glowMesh);
+      parent.add(glowMesh);
       
       glowEffects.push({
         mesh: glowMesh,
@@ -128,7 +138,7 @@ export default function RSpherePage() {
     nodePositions.forEach(position => {
       const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
       node.position.copy(position);
-      scene.add(node);
+      sphere.add(node);
       nodes.push(node);
     });
 
@@ -157,7 +167,7 @@ export default function RSpherePage() {
             nodes[j].position,
           ]);
           const line = new THREE.Line(lineGeometry, lineMaterial);
-          scene.add(line);
+          sphere.add(line);
           
           connections.push({
             start: nodes[i].position.clone(),
@@ -186,7 +196,7 @@ export default function RSpherePage() {
       ]);
       
       const pulseLine = new THREE.Line(pulseGeometry, pulseMaterial);
-      scene.add(pulseLine);
+      sphere.add(pulseLine);
 
       // Create glow effect at start node
       createGlowEffect(connection.start);
@@ -214,7 +224,7 @@ export default function RSpherePage() {
           // Create glow effect at end node
           createGlowEffect(pulse.endNode);
           
-          scene.remove(pulse.line);
+          sphere.remove(pulse.line);
           pulses.splice(index, 1);
           createNewPulse();
           return;

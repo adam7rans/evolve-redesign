@@ -124,31 +124,34 @@ export default function RSpherePage() {
     controls.dampingFactor = 0.05;
     controls.enableZoom = true;
 
-    // Create background pillars
-    const backgroundGroup = new THREE.Group();
-    const numPillars = 20;
-    const pillarSpacing = 2;
-    const totalWidth = (numPillars - 1) * pillarSpacing;
-    const startX = -totalWidth / 2;
-
-    const pillarMaterial = new THREE.MeshStandardMaterial({ 
+    // Create flying sphere for background
+    const flyingSphereRadius = 1;
+    const flyingSphereGeometry = new THREE.SphereGeometry(flyingSphereRadius, 32, 32);
+    const flyingSphereMaterial = new THREE.MeshStandardMaterial({ 
       color: 0xffffff,
-      roughness: 0.0,
-      metalness: 0.0,
       emissive: 0xffffff,
-      emissiveIntensity: 0.8
+      emissiveIntensity: 1.0,
+      metalness: 0.0,
+      roughness: 0.0,
     });
     
-    // Create pillars
-    for (let i = 0; i < numPillars; i++) {
-      const pillarGeometry = new THREE.CylinderGeometry(0.2, 0.2, 8, 16);
-      const pillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
-      const x = startX + (i * pillarSpacing);
-      pillar.position.set(x, 0, -6);
-      backgroundGroup.add(pillar);
-    }
+    const flyingSphere = new THREE.Mesh(flyingSphereGeometry, flyingSphereMaterial);
+    // Start position off-screen
+    flyingSphere.position.set(-15, 0, -8);
+    backgroundScene.add(flyingSphere);
 
-    backgroundScene.add(backgroundGroup);
+    // Add point light to follow the sphere
+    const flyingSphereLight = new THREE.PointLight(0xffffff, 2, 10);
+    flyingSphere.add(flyingSphereLight);
+
+    // Animation parameters for flying sphere
+    const flyingSphereParams = {
+      startX: -15,
+      endX: 15,
+      duration: 5000, // 5 seconds
+      lastUpdateTime: Date.now(),
+      progress: 0
+    };
 
     // Create glass sphere first
     const simpleGlassSphere = new THREE.Mesh(
@@ -192,6 +195,34 @@ export default function RSpherePage() {
     const nodesGroup = new THREE.Group();
     backgroundScene.add(nodesGroup);
 
+    // Create line material for connections
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.3,
+    });
+
+    // Function to calculate distance between two points on sphere surface
+    const sphericalDistance = (p1: THREE.Vector3, p2: THREE.Vector3): number => {
+      // Convert to spherical coordinates
+      const phi1 = Math.acos(p1.y / sphereRadius);
+      const theta1 = Math.atan2(p1.z, p1.x);
+      const phi2 = Math.acos(p2.y / sphereRadius);
+      const theta2 = Math.atan2(p2.z, p2.x);
+      
+      // Calculate great circle distance
+      const deltaTheta = Math.abs(theta2 - theta1);
+      const deltaPhi = Math.abs(phi2 - phi1);
+      return Math.acos(
+        Math.sin(phi1) * Math.sin(phi2) * Math.cos(deltaTheta) +
+        Math.cos(phi1) * Math.cos(phi2)
+      ) * sphereRadius;
+    };
+
+    // Store node positions for connection creation
+    const nodePositions: THREE.Vector3[] = [];
+    const connections: THREE.Line[] = [];
+
     for (let i = 0; i < 250; i++) {
       // Create node for the glass sphere
       const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
@@ -200,10 +231,10 @@ export default function RSpherePage() {
       node.lookAt(0, 0, 0);
       simpleGlassSphere.add(node);
       nodes.push(node);
+      nodePositions.push(position.clone());
 
       // Create corresponding emissive node in background scene
       const emissiveNode = new THREE.Mesh(nodeGeometry, nodeMaterial.clone());
-      // Position slightly behind the glass sphere
       const backgroundPosition = position.clone().multiplyScalar(1.2);
       emissiveNode.position.copy(backgroundPosition);
       emissiveNode.lookAt(0, 0, 0);
@@ -213,6 +244,44 @@ export default function RSpherePage() {
       const pointLight = new THREE.PointLight(0xffffff, 0.05, 2);
       pointLight.position.copy(backgroundPosition);
       backgroundScene.add(pointLight);
+    }
+
+    // Create connections between nearby nodes
+    const connectionThreshold = sphereRadius * 0.8; // Maximum distance for connection
+    const maxConnectionsPerNode = 3; // Limit connections per node for cleaner look
+    
+    for (let i = 0; i < nodePositions.length; i++) {
+      let connectionsCount = 0;
+      const distances: { index: number; distance: number }[] = [];
+      
+      // Calculate distances to all other nodes
+      for (let j = i + 1; j < nodePositions.length; j++) {
+        const distance = sphericalDistance(nodePositions[i], nodePositions[j]);
+        if (distance < connectionThreshold) {
+          distances.push({ index: j, distance });
+        }
+      }
+      
+      // Sort by distance and create connections to closest nodes
+      distances.sort((a, b) => a.distance - b.distance);
+      for (const { index } of distances.slice(0, maxConnectionsPerNode)) {
+        const points = [];
+        // Create curved line following sphere surface
+        const start = nodePositions[i];
+        const end = nodePositions[index];
+        const segments = 10;
+        
+        for (let t = 0; t <= segments; t++) {
+          const point = start.clone().lerp(end, t / segments);
+          point.normalize().multiplyScalar(sphereRadius);
+          points.push(point);
+        }
+        
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(geometry, lineMaterial);
+        simpleGlassSphere.add(line);
+        connections.push(line);
+      }
     }
 
     // Add ambient and directional light to both scenes
@@ -231,6 +300,32 @@ export default function RSpherePage() {
     function animate() {
       frameId = requestAnimationFrame(animate);
       controls.update();
+      
+      // Animate flying sphere
+      const currentTime = Date.now();
+      const deltaTime = currentTime - flyingSphereParams.lastUpdateTime;
+      flyingSphereParams.progress += deltaTime / flyingSphereParams.duration;
+
+      if (flyingSphereParams.progress >= 1) {
+        // Reset progress and update last time
+        flyingSphereParams.progress = 0;
+        flyingSphereParams.lastUpdateTime = currentTime;
+        // Reset sphere position
+        flyingSphere.position.x = flyingSphereParams.startX;
+      } else {
+        // Update sphere position
+        const x = THREE.MathUtils.lerp(
+          flyingSphereParams.startX,
+          flyingSphereParams.endX,
+          flyingSphereParams.progress
+        );
+        flyingSphere.position.x = x;
+        
+        // Add slight vertical movement using sine wave
+        flyingSphere.position.y = Math.sin(flyingSphereParams.progress * Math.PI * 2) * 2;
+      }
+
+      flyingSphereParams.lastUpdateTime = currentTime;
       
       // Rotate the sphere slowly
       simpleGlassSphere.rotation.y += 0.001;

@@ -150,17 +150,7 @@ export default function RSpherePage() {
 
     backgroundScene.add(backgroundGroup);
 
-    // Add ambient and directional light to both scenes
-    const sceneAmbientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(sceneAmbientLight);
-    backgroundScene.add(sceneAmbientLight.clone());
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
-    backgroundScene.add(directionalLight.clone());
-
-    // Create glass sphere
+    // Create glass sphere first
     const simpleGlassSphere = new THREE.Mesh(
       new THREE.SphereGeometry(2.5, 64, 64),
       new THREE.ShaderMaterial({
@@ -171,6 +161,108 @@ export default function RSpherePage() {
       })
     );
     scene.add(simpleGlassSphere);
+
+    // Create nodes on sphere surface
+    const nodeGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+    const nodeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 1.0,
+      metalness: 0.0,
+      roughness: 0.0,
+    });
+
+    // Helper function to get random points on sphere surface
+    const getRandomSpherePoint = (radius: number) => {
+      const theta = 2 * Math.PI * Math.random();
+      const phi = Math.acos(2 * Math.random() - 1);
+      
+      return new THREE.Vector3(
+        radius * Math.sin(phi) * Math.cos(theta),
+        radius * Math.sin(phi) * Math.sin(theta),
+        radius * Math.cos(phi)
+      );
+    };
+
+    // Create 250 nodes
+    const nodes: THREE.Mesh[] = [];
+    const sphereRadius = 2.5; // Same as glass sphere radius
+
+    // Create a group for nodes in the background scene
+    const nodesGroup = new THREE.Group();
+    backgroundScene.add(nodesGroup);
+
+    for (let i = 0; i < 250; i++) {
+      // Create node for the glass sphere
+      const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+      const position = getRandomSpherePoint(sphereRadius);
+      node.position.copy(position);
+      node.lookAt(0, 0, 0);
+      simpleGlassSphere.add(node);
+      nodes.push(node);
+
+      // Create corresponding emissive node in background scene
+      const emissiveNode = new THREE.Mesh(nodeGeometry, nodeMaterial.clone());
+      // Position slightly behind the glass sphere
+      const backgroundPosition = position.clone().multiplyScalar(1.2);
+      emissiveNode.position.copy(backgroundPosition);
+      emissiveNode.lookAt(0, 0, 0);
+      nodesGroup.add(emissiveNode);
+
+      // Add point light at node position
+      const pointLight = new THREE.PointLight(0xffffff, 0.05, 2);
+      pointLight.position.copy(backgroundPosition);
+      backgroundScene.add(pointLight);
+    }
+
+    // Add ambient and directional light to both scenes
+    const sceneAmbientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(sceneAmbientLight);
+    backgroundScene.add(sceneAmbientLight.clone());
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+    backgroundScene.add(directionalLight.clone());
+
+    // Animation loop
+    let frameId: number;
+
+    function animate() {
+      frameId = requestAnimationFrame(animate);
+      controls.update();
+      
+      // Rotate the sphere slowly
+      simpleGlassSphere.rotation.y += 0.001;
+
+      // Update uniforms for glass material
+      uniforms.uIorR.value = iorR;
+      uniforms.uIorY.value = iorY;
+      uniforms.uIorG.value = iorG;
+      uniforms.uIorC.value = iorC;
+      uniforms.uIorB.value = iorB;
+      uniforms.uIorP.value = iorP;
+      uniforms.uRefractPower.value = refraction;
+      uniforms.uChromaticAberration.value = chromaticAberration;
+      uniforms.uSaturation.value = saturation;
+      uniforms.uShininess.value = shininess;
+      uniforms.uDiffuseness.value = diffuseness;
+      uniforms.uFresnelPower.value = fresnelPower;
+      uniforms.uLight.value.set(light.x, light.y, light.z);
+
+      // Rotate the background nodes group to match the glass sphere
+      nodesGroup.rotation.copy(simpleGlassSphere.rotation);
+
+      // Render background to texture
+      renderer.setRenderTarget(renderTarget);
+      renderer.clear();
+      renderer.render(backgroundScene, camera);
+      renderer.setRenderTarget(null);
+
+      // Render main scene
+      renderer.clear();
+      renderer.render(scene, camera);
+    }
 
     // Handle window resize
     const handleResize = () => {
@@ -199,42 +291,6 @@ export default function RSpherePage() {
     renderer.clear();
     renderer.render(backgroundScene, camera);
     renderer.setRenderTarget(null);
-
-    // Animation loop
-    let frameId: number;
-
-    function animate() {
-      frameId = requestAnimationFrame(animate);
-      controls.update();
-      
-      // Rotate the sphere slowly
-      simpleGlassSphere.rotation.y += 0.001;
-
-      // Update uniforms for glass material
-      uniforms.uIorR.value = iorR;
-      uniforms.uIorY.value = iorY;
-      uniforms.uIorG.value = iorG;
-      uniforms.uIorC.value = iorC;
-      uniforms.uIorB.value = iorB;
-      uniforms.uIorP.value = iorP;
-      uniforms.uRefractPower.value = refraction;
-      uniforms.uChromaticAberration.value = chromaticAberration;
-      uniforms.uSaturation.value = saturation;
-      uniforms.uShininess.value = shininess;
-      uniforms.uDiffuseness.value = diffuseness;
-      uniforms.uFresnelPower.value = fresnelPower;
-      uniforms.uLight.value.set(light.x, light.y, light.z);
-
-      // Render background to texture
-      renderer.setRenderTarget(renderTarget);
-      renderer.clear();
-      renderer.render(backgroundScene, camera);
-      renderer.setRenderTarget(null);
-
-      // Render main scene
-      renderer.clear();
-      renderer.render(scene, camera);
-    }
 
     // Start animation
     animate();

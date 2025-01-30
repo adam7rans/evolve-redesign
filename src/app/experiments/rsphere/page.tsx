@@ -27,26 +27,34 @@ export default function RSpherePage() {
     iorP,
     saturation,
     chromaticAberration,
-    refraction
-  } = useControls('Glass', {
-    light: {
-      value: { x: -1.0, y: 1.0, z: 1.0 },
-      step: 0.1,
-    },
-    diffuseness: { value: 0.2 },
-    shininess: { value: 40.0 },
-    fresnelPower: { value: 8.0 },
-    ior: folder({
-      iorR: { min: 1.0, max: 2.333, step: 0.001, value: 1.15 },
-      iorY: { min: 1.0, max: 2.333, step: 0.001, value: 1.16 },
-      iorG: { min: 1.0, max: 2.333, step: 0.001, value: 1.18 },
-      iorC: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
-      iorB: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
-      iorP: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
+    refraction,
+    flightPathRadius,
+    flightPathSpeed
+  } = useControls({
+    Glass: folder({
+      light: {
+        value: { x: -1.0, y: 1.0, z: 1.0 },
+        step: 0.1,
+      },
+      diffuseness: { value: 0.2 },
+      shininess: { value: 40.0 },
+      fresnelPower: { value: 8.0 },
+      ior: folder({
+        iorR: { min: 1.0, max: 2.333, step: 0.001, value: 1.15 },
+        iorY: { min: 1.0, max: 2.333, step: 0.001, value: 1.16 },
+        iorG: { min: 1.0, max: 2.333, step: 0.001, value: 1.18 },
+        iorC: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
+        iorB: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
+        iorP: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
+      }),
+      saturation: { value: 1.00, min: 1, max: 1.25, step: 0.01 },
+      chromaticAberration: { value: 0.6, min: 0, max: 1.5, step: 0.01 },
+      refraction: { value: 0.4, min: 0, max: 1, step: 0.01 },
     }),
-    saturation: { value: 1.00, min: 1, max: 1.25, step: 0.01 },
-    chromaticAberration: { value: 0.6, min: 0, max: 1.5, step: 0.01 },
-    refraction: { value: 0.4, min: 0, max: 1, step: 0.01 },
+    'Flight Path': folder({
+      flightPathRadius: { value: 12, min: 0, max: 20, step: 0.5 },
+      flightPathSpeed: { value: 1, min: 0.2, max: 3, step: 0.1 }
+    })
   });
 
   // Create uniforms for the shader material
@@ -124,7 +132,7 @@ export default function RSpherePage() {
     controls.dampingFactor = 0.05;
     controls.enableZoom = true;
 
-    // Create flying sphere for background
+    // Create flying sphere
     const flyingSphereRadius = 1;
     const flyingSphereGeometry = new THREE.SphereGeometry(flyingSphereRadius, 32, 32);
     const flyingSphereMaterial = new THREE.MeshStandardMaterial({ 
@@ -136,19 +144,26 @@ export default function RSpherePage() {
     });
     
     const flyingSphere = new THREE.Mesh(flyingSphereGeometry, flyingSphereMaterial);
-    // Start position off-screen
-    flyingSphere.position.set(-15, 0, -8);
-    backgroundScene.add(flyingSphere);
+    // Position the sphere on the circular path
+    const initialRadius = flightPathRadius; // Use the value from Leva controls
+    flyingSphere.position.set(initialRadius, 0, -15);
+    scene.add(flyingSphere);
 
-    // Add point light to follow the sphere
+    // Create a clone of the flying sphere for the background scene
+    const backgroundFlyingSphere = flyingSphere.clone();
+    backgroundScene.add(backgroundFlyingSphere);
+
+    // Add point light to follow each sphere
     const flyingSphereLight = new THREE.PointLight(0xffffff, 2, 10);
     flyingSphere.add(flyingSphereLight);
+    const backgroundFlyingSphereLight = new THREE.PointLight(0xffffff, 2, 10);
+    backgroundFlyingSphere.add(backgroundFlyingSphereLight);
 
     // Animation parameters for flying sphere
     const flyingSphereParams = {
-      startX: -15,
-      endX: 15,
-      duration: 5000, // 5 seconds
+      radius: initialRadius,
+      zOffset: -15,
+      duration: 5000 / flightPathSpeed,
       lastUpdateTime: Date.now(),
       progress: 0
     };
@@ -202,6 +217,13 @@ export default function RSpherePage() {
       opacity: 0.3,
     });
 
+    // Create material for animated lines
+    const animatedLineMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 1.0,
+    });
+
     // Function to calculate distance between two points on sphere surface
     const sphericalDistance = (p1: THREE.Vector3, p2: THREE.Vector3): number => {
       // Convert to spherical coordinates
@@ -222,6 +244,9 @@ export default function RSpherePage() {
     // Store node positions for connection creation
     const nodePositions: THREE.Vector3[] = [];
     const connections: THREE.Line[] = [];
+
+    // Store connection paths for animation
+    const connectionPaths: { points: THREE.Vector3[]; progress: number; speed: number }[] = [];
 
     for (let i = 0; i < 250; i++) {
       // Create node for the glass sphere
@@ -281,8 +306,23 @@ export default function RSpherePage() {
         const line = new THREE.Line(geometry, lineMaterial);
         simpleGlassSphere.add(line);
         connections.push(line);
+
+        // Store path for animation
+        connectionPaths.push({
+          points: points,
+          progress: Math.random(), // Random starting position
+          speed: 1.0 + Math.random() * 1.5, // Much faster speed between 1.0 and 2.5
+        });
       }
     }
+
+    // Create animated lines
+    const animatedLines: THREE.Line[] = connectionPaths.map(() => {
+      const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      const line = new THREE.Line(geometry, animatedLineMaterial);
+      simpleGlassSphere.add(line);
+      return line;
+    });
 
     // Add ambient and directional light to both scenes
     const sceneAmbientLight = new THREE.AmbientLight(0xffffff, 0.7);
@@ -310,25 +350,56 @@ export default function RSpherePage() {
         // Reset progress and update last time
         flyingSphereParams.progress = 0;
         flyingSphereParams.lastUpdateTime = currentTime;
-        // Reset sphere position
-        flyingSphere.position.x = flyingSphereParams.startX;
-      } else {
-        // Update sphere position
-        const x = THREE.MathUtils.lerp(
-          flyingSphereParams.startX,
-          flyingSphereParams.endX,
-          flyingSphereParams.progress
-        );
-        flyingSphere.position.x = x;
-        
-        // Add slight vertical movement using sine wave
-        flyingSphere.position.y = Math.sin(flyingSphereParams.progress * Math.PI * 2) * 2;
       }
+
+      // Calculate position on circular path (counter-clockwise)
+      const angle = -flyingSphereParams.progress * Math.PI * 2;
+      const newX = Math.cos(angle) * flightPathRadius;
+      const newY = Math.sin(angle) * flightPathRadius;
+      const newZ = flyingSphereParams.zOffset;
+
+      // Update both spheres' positions
+      flyingSphere.position.set(newX, newY, newZ);
+      backgroundFlyingSphere.position.set(newX, newY, newZ);
 
       flyingSphereParams.lastUpdateTime = currentTime;
       
       // Rotate the sphere slowly
       simpleGlassSphere.rotation.y += 0.001;
+
+      // Update animated lines
+      connectionPaths.forEach((path, index) => {
+        path.progress += path.speed * 0.05; // Increased speed multiplier from 0.01 to 0.05
+        if (path.progress >= 1) {
+          path.progress = 0;
+        }
+
+        // Calculate current position on the path
+        const pointIndex = Math.floor(path.progress * (path.points.length - 1));
+        const nextPointIndex = (pointIndex + 1) % path.points.length;
+        const subProgress = path.progress * (path.points.length - 1) - pointIndex;
+
+        const currentPoint = path.points[pointIndex].clone();
+        const nextPoint = path.points[nextPointIndex].clone();
+        const position = currentPoint.lerp(nextPoint, subProgress);
+
+        // Update line geometry
+        const lineLength = 0.2; // Length of the animated line segment
+        const endProgress = Math.min(1, path.progress + lineLength);
+        const endPointIndex = Math.floor(endProgress * (path.points.length - 1));
+        const endNextPointIndex = (endPointIndex + 1) % path.points.length;
+        const endSubProgress = endProgress * (path.points.length - 1) - endPointIndex;
+
+        const endCurrentPoint = path.points[endPointIndex].clone();
+        const endNextPoint = path.points[endNextPointIndex].clone();
+        const endPosition = endCurrentPoint.lerp(endNextPoint, endSubProgress);
+
+        const positions = new Float32Array([
+          position.x, position.y, position.z,
+          endPosition.x, endPosition.y, endPosition.z
+        ]);
+        animatedLines[index].geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      });
 
       // Update uniforms for glass material
       uniforms.uIorR.value = iorR;
@@ -348,13 +419,16 @@ export default function RSpherePage() {
       // Rotate the background nodes group to match the glass sphere
       nodesGroup.rotation.copy(simpleGlassSphere.rotation);
 
+      // Update duration based on current speed
+      flyingSphereParams.duration = 5000 / flightPathSpeed;
+
       // Render background to texture
       renderer.setRenderTarget(renderTarget);
       renderer.clear();
       renderer.render(backgroundScene, camera);
       renderer.setRenderTarget(null);
 
-      // Render main scene
+      // Render main scene (now includes the flying sphere)
       renderer.clear();
       renderer.render(scene, camera);
     }
@@ -407,7 +481,7 @@ export default function RSpherePage() {
         }
       });
     };
-  }, [uniforms, iorR, iorY, iorG, iorC, iorB, iorP, refraction, chromaticAberration, saturation, shininess, diffuseness, fresnelPower, light]);
+  }, [uniforms, iorR, iorY, iorG, iorC, iorB, iorP, refraction, chromaticAberration, saturation, shininess, diffuseness, fresnelPower, light, flightPathRadius, flightPathSpeed]);
 
   return (
     <canvas

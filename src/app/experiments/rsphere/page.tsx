@@ -1,291 +1,273 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
-interface Pulse {
-  startNode: THREE.Vector3;
-  endNode: THREE.Vector3;
-  progress: number;
-  line: THREE.Line;
-  speed: number;
-}
-
-interface GlowEffect {
-  mesh: THREE.Mesh;
-  opacity: number;
-  fadeSpeed: number;
-}
+import { useControls, folder } from 'leva';
 
 export default function RSpherePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const renderTargetRef = useRef<THREE.WebGLRenderTarget | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const backgroundSceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  
+  // Create controls for the glass material
+  const {
+    light,
+    shininess,
+    diffuseness,
+    fresnelPower,
+    iorR,
+    iorY,
+    iorG,
+    iorC,
+    iorB,
+    iorP,
+    saturation,
+    chromaticAberration,
+    refraction
+  } = useControls('Glass', {
+    light: {
+      value: { x: -1.0, y: 1.0, z: 1.0 },
+      step: 0.1,
+    },
+    diffuseness: { value: 0.2 },
+    shininess: { value: 40.0 },
+    fresnelPower: { value: 8.0 },
+    ior: folder({
+      iorR: { min: 1.0, max: 2.333, step: 0.001, value: 1.15 },
+      iorY: { min: 1.0, max: 2.333, step: 0.001, value: 1.16 },
+      iorG: { min: 1.0, max: 2.333, step: 0.001, value: 1.18 },
+      iorC: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
+      iorB: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
+      iorP: { min: 1.0, max: 2.333, step: 0.001, value: 1.22 },
+    }),
+    saturation: { value: 1.00, min: 1, max: 1.25, step: 0.01 },
+    chromaticAberration: { value: 0.6, min: 0, max: 1.5, step: 0.01 },
+    refraction: { value: 0.4, min: 0, max: 1, step: 0.01 },
+  });
+
+  // Create uniforms for the shader material
+  const { uniforms } = useMemo(() => {
+    const uniforms = {
+      uTexture: { value: null as THREE.Texture | null },
+      uIorR: { value: 1.15 },
+      uIorY: { value: 1.16 },
+      uIorG: { value: 1.18 },
+      uIorC: { value: 1.22 },
+      uIorB: { value: 1.22 },
+      uIorP: { value: 1.22 },
+      uRefractPower: { value: 0.4 },
+      uChromaticAberration: { value: 0.6 },
+      uSaturation: { value: 1.0 },
+      uShininess: { value: 40.0 },
+      uDiffuseness: { value: 0.2 },
+      uFresnelPower: { value: 8.0 },
+      uLight: { value: new THREE.Vector3(-1.0, 1.0, 1.0) },
+      winResolution: { value: new THREE.Vector2(1, 1) },
+    };
+
+    return { uniforms };
+  }, []);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     // Scene setup
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    sceneRef.current = scene;
+    
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    cameraRef.current = camera;
+    camera.position.set(0, 0, 8);
+    camera.lookAt(0, 0, 0);
+
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.current,
       antialias: true,
       alpha: true,
     });
+    rendererRef.current = renderer;
     renderer.setSize(window.innerWidth, window.innerHeight);
 
+    // Create render target for background
+    const renderTarget = new THREE.WebGLRenderTarget(
+      window.innerWidth,
+      window.innerHeight,
+      {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat,
+        type: THREE.FloatType,
+        stencilBuffer: false,
+        depthBuffer: true
+      }
+    );
+    renderTargetRef.current = renderTarget;
+    uniforms.uTexture.value = renderTarget.texture;
+
+    // Create a separate scene for background elements
+    const backgroundScene = new THREE.Scene();
+    backgroundSceneRef.current = backgroundScene;
+    backgroundScene.background = new THREE.Color(0x000000);
+    
     // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.enableZoom = true;
 
-    // Create sphere geometry
-    const sphereGeometry = new THREE.SphereGeometry(5, 64, 64);
-    const sphereMaterial = new THREE.MeshPhongMaterial({
-      color: 0x2a2a2a,
-      wireframe: false,
-      transparent: true,
-      opacity: 0.8,
-    });
-    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    
-    // Add wireframe sphere
-    const wireframeMaterial = new THREE.MeshBasicMaterial({
+    // Create background pillars
+    const backgroundGroup = new THREE.Group();
+    const numPillars = 20;
+    const pillarSpacing = 2;
+    const totalWidth = (numPillars - 1) * pillarSpacing;
+    const startX = -totalWidth / 2;
+
+    const pillarMaterial = new THREE.MeshStandardMaterial({ 
       color: 0xffffff,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.1,
+      roughness: 0.0,
+      metalness: 0.0,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.8
     });
-    const wireframeSphere = new THREE.Mesh(sphereGeometry, wireframeMaterial);
-    sphere.add(wireframeSphere);
     
-    // Set up rotation container
-    const sphereContainer = new THREE.Object3D();
-    sphereContainer.add(sphere);
-    scene.add(sphereContainer);
+    // Create pillars
+    for (let i = 0; i < numPillars; i++) {
+      const pillarGeometry = new THREE.CylinderGeometry(0.2, 0.2, 8, 16);
+      const pillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+      const x = startX + (i * pillarSpacing);
+      pillar.position.set(x, 0, -6);
+      backgroundGroup.add(pillar);
+    }
 
-    // Set initial rotation speed (radians per frame)
-    const rotationSpeed = 0.01;
+    backgroundScene.add(backgroundGroup);
 
-    // Add a slight tilt to mimic Earth's axis (about 23.5 degrees)
-    sphereContainer.rotation.z = THREE.MathUtils.degToRad(23.5);
+    // Add ambient and directional light to both scenes
+    const sceneAmbientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(sceneAmbientLight);
+    backgroundScene.add(sceneAmbientLight.clone());
 
-    // Glow effect management
-    const glowEffects: GlowEffect[] = [];
-    const glowGeometry = new THREE.SphereGeometry(0.15, 16, 16);
-    
-    function createGlowEffect(position: THREE.Vector3, parent: THREE.Object3D = sphere) {
-      const glowMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+    backgroundScene.add(directionalLight.clone());
+
+    // Create glass sphere
+    const simpleGlassSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(2.5, 64, 64),
+      new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: require('./shaders/vertex.glsl').default,
+        fragmentShader: require('./shaders/fragment.glsl').default,
         transparent: true,
-        opacity: 0.8,
-      });
-      
-      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-      glowMesh.position.copy(position);
-      parent.add(glowMesh);
-      
-      glowEffects.push({
-        mesh: glowMesh,
-        opacity: 0.8,
-        fadeSpeed: 0.1,
-      });
-    }
+      })
+    );
+    scene.add(simpleGlassSphere);
 
-    function updateGlowEffects() {
-      for (let i = glowEffects.length - 1; i >= 0; i--) {
-        const effect = glowEffects[i];
-        effect.opacity -= effect.fadeSpeed;
-        
-        if (effect.opacity <= 0) {
-          scene.remove(effect.mesh);
-          glowEffects.splice(i, 1);
-        } else {
-          (effect.mesh.material as THREE.MeshBasicMaterial).opacity = effect.opacity;
-        }
-      }
-    }
+    // Handle window resize
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
 
-    // Generate random points on sphere surface
-    const generateRandomSpherePoints = (numPoints: number, radius: number) => {
-      const points: THREE.Vector3[] = [];
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
 
-      for (let i = 0; i < numPoints; i++) {
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        
-        const x = radius * Math.sin(phi) * Math.cos(theta);
-        const y = radius * Math.sin(phi) * Math.sin(theta);
-        const z = radius * Math.cos(phi);
+      renderer.setSize(width, height);
+      renderTarget.setSize(width, height);
+      uniforms.winResolution.value.set(width, height);
 
-        const basePoint = new THREE.Vector3(x, y, z).normalize().multiplyScalar(radius);
-        const elevation = radius * (1 + Math.random() * 0.06);
-        const point = basePoint.normalize().multiplyScalar(elevation);
-        points.push(point);
-      }
-
-      return points;
+      // Re-render background when resizing
+      renderer.setRenderTarget(renderTarget);
+      renderer.clear();
+      renderer.render(backgroundScene, camera);
+      renderer.setRenderTarget(null);
     };
 
-    // Create nodes
-    const nodeGeometry = new THREE.SphereGeometry(0.05, 16, 16);
-    const nodeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const nodes: THREE.Mesh[] = [];
-    
-    const nodePositions = generateRandomSpherePoints(500, 5);
-    
-    nodePositions.forEach(position => {
-      const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
-      node.position.copy(position);
-      sphere.add(node);
-      nodes.push(node);
-    });
+    window.addEventListener('resize', handleResize);
 
-    // Store connected node pairs
-    interface NodeConnection {
-      start: THREE.Vector3;
-      end: THREE.Vector3;
-    }
-    const connections: NodeConnection[] = [];
-
-    // Create connections between nearby nodes
-    const lineMaterial = new THREE.LineBasicMaterial({ 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.15,
-      depthWrite: false,
-    });
-
-    const maxDistance = 1.8;
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const distance = nodes[i].position.distanceTo(nodes[j].position);
-        if (distance < maxDistance) {
-          const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-            nodes[i].position,
-            nodes[j].position,
-          ]);
-          const line = new THREE.Line(lineGeometry, lineMaterial);
-          sphere.add(line);
-          
-          connections.push({
-            start: nodes[i].position.clone(),
-            end: nodes[j].position.clone()
-          });
-        }
-      }
-    }
-
-    // Energy pulse system
-    const pulses: Pulse[] = [];
-    const pulseMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.8,
-    });
-
-    function createNewPulse() {
-      if (connections.length === 0) return;
-      
-      const connection = connections[Math.floor(Math.random() * connections.length)];
-      
-      const pulseGeometry = new THREE.BufferGeometry().setFromPoints([
-        connection.start,
-        connection.start,
-      ]);
-      
-      const pulseLine = new THREE.Line(pulseGeometry, pulseMaterial);
-      sphere.add(pulseLine);
-
-      // Create glow effect at start node
-      createGlowEffect(connection.start);
-
-      pulses.push({
-        startNode: connection.start,
-        endNode: connection.end,
-        progress: 0,
-        line: pulseLine,
-        speed: 0.1 + Math.random() * 0.15,
-      });
-    }
-
-    // Create initial pulses
-    for (let i = 0; i < 100; i++) {
-      createNewPulse();
-    }
-
-    // Update pulses
-    function updatePulses() {
-      pulses.forEach((pulse, index) => {
-        pulse.progress += pulse.speed;
-        
-        if (pulse.progress >= 1) {
-          // Create glow effect at end node
-          createGlowEffect(pulse.endNode);
-          
-          sphere.remove(pulse.line);
-          pulses.splice(index, 1);
-          createNewPulse();
-          return;
-        }
-
-        const currentPos = new THREE.Vector3().lerpVectors(
-          pulse.startNode,
-          pulse.endNode,
-          pulse.progress
-        );
-
-        const points = [pulse.startNode, currentPos];
-        pulse.line.geometry.setFromPoints(points);
-      });
-    }
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-
-    const pointLight = new THREE.PointLight(0xffffff, 1);
-    pointLight.position.set(10, 10, 10);
-    scene.add(pointLight);
-
-    // Position camera
-    camera.position.z = 15;
+    // Set initial window resolution and render background
+    uniforms.winResolution.value.set(window.innerWidth, window.innerHeight);
+    renderer.setRenderTarget(renderTarget);
+    renderer.clear();
+    renderer.render(backgroundScene, camera);
+    renderer.setRenderTarget(null);
 
     // Animation loop
+    let frameId: number;
+
     function animate() {
-      requestAnimationFrame(animate);
-
-      // Rotate the sphere container around its axis
-      sphere.rotation.y += rotationSpeed;
-
-      // Update existing animations
-      updatePulses();
-      updateGlowEffects();
+      frameId = requestAnimationFrame(animate);
       controls.update();
+      
+      // Rotate the sphere slowly
+      simpleGlassSphere.rotation.y += 0.001;
+
+      // Update uniforms for glass material
+      uniforms.uIorR.value = iorR;
+      uniforms.uIorY.value = iorY;
+      uniforms.uIorG.value = iorG;
+      uniforms.uIorC.value = iorC;
+      uniforms.uIorB.value = iorB;
+      uniforms.uIorP.value = iorP;
+      uniforms.uRefractPower.value = refraction;
+      uniforms.uChromaticAberration.value = chromaticAberration;
+      uniforms.uSaturation.value = saturation;
+      uniforms.uShininess.value = shininess;
+      uniforms.uDiffuseness.value = diffuseness;
+      uniforms.uFresnelPower.value = fresnelPower;
+      uniforms.uLight.value.set(light.x, light.y, light.z);
+
+      // Render background to texture
+      renderer.setRenderTarget(renderTarget);
+      renderer.clear();
+      renderer.render(backgroundScene, camera);
+      renderer.setRenderTarget(null);
+
+      // Render main scene
+      renderer.clear();
       renderer.render(scene, camera);
     }
 
-    // Handle window resize
-    function handleResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    window.addEventListener('resize', handleResize);
+    // Start animation
     animate();
 
     // Cleanup
     return () => {
+      cancelAnimationFrame(frameId);
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
+      renderTarget.dispose();
+      scene.traverse((object) => {
+        if (object instanceof THREE.Mesh) {
+          object.geometry.dispose();
+          if (Array.isArray(object.material)) {
+            object.material.forEach(material => material.dispose());
+          } else {
+            object.material.dispose();
+          }
+        }
+      });
     };
-  }, []);
+  }, [uniforms, iorR, iorY, iorG, iorC, iorB, iorP, refraction, chromaticAberration, saturation, shininess, diffuseness, fresnelPower, light]);
 
   return (
-    <div className="w-full h-screen bg-black">
-      <canvas ref={canvasRef} className="w-full h-full" />
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+      }}
+    />
   );
 }
